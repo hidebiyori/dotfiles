@@ -1,0 +1,38 @@
+### Common ###
+shell -${SHELL}
+autodetach on
+startup_message off
+vbell off
+msgwait 0
+msgminwait 0
+defscrollback 10000
+altscreen on
+escape ^Tt
+
+defutf8 on
+defencoding utf8
+encoding utf8 utf8
+
+# fixed a window
+termcapinfo xterm* is=\E[r\E[m\E[2J\E[H\E[?7h\E[?1;4;6l
+
+# enable mouse scroll
+termcapinfo xterm* ti@:te@
+
+# show prev window/current window/next window/user@host/loadavg/datetime
+hardstatus alwayslastline "%-w%50L>%{= w}%n %t%{-}%+w%-60<%=${USER}@%H[%l][%Y/%m/%d(%D)%0c]"
+
+# open screen tabs and execute commands
+screen -t vim 0
+screen -t log 1
+screen -t cmd 2
+screen -t ref 3
+screen -t tmp 4
+select 0
+stuff "v\015"
+select 1
+stuff "git l\015"
+select 2
+stuff "git pull\015"
+select 0
+select 2
