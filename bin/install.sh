@@ -58,6 +58,7 @@ function setSymbolicLink()
 function setBrew()
 {
   if which brew; then
+    brew update
     brew upgrade
   else
     # https://docs.brew.sh/Installation

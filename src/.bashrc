@@ -29,7 +29,7 @@ fi
 GIT_ROOT="${HOME}/git"
 alias r="source ${HOME}/.bashrc"
 alias u="${GIT_ROOT}/dotfiles/bin/install.sh && r"
-alias o="if [ x${TERM} != xscreen ]; then screen -D -R; fi"
+alias o="if [ x${TERM} != xscreen ]; then screen -U -D -R; fi"
 alias a="cd ${GIT_ROOT}/hidebiyori-app"
 alias s="cd ${GIT_ROOT}/dotfiles"
 alias d="cd ${GIT_ROOT}"
@@ -78,5 +78,6 @@ fi
 
 ### Common ###
 if [ "${PWD}" = "${HOME}" ]; then
+  o
   a
 fi
