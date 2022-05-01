@@ -18,7 +18,7 @@ function removeOptions()
 
 function setDirectories()
 {
-  mkdir -p "${HOME}"/{.config,bin,var,tmp,old}
+  mkdir -p "${HOME}"/{.config,.vim/{backup,swap,undo},bin,var,tmp,old}
 }
 
 function setGitRepository()
