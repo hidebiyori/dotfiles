@@ -1,0 +1,67 @@
+[user]
+  name = "hidebiyori"
+  email = "87452612+hidebiyori@users.noreply.github.com"
+
+[core]
+  pager = "less -+S -M -q"
+  editor = "vim +1 -f"
+  autocrlf = false
+  ignorecase = false
+  quotepath = false
+
+[protocol]
+  version = 2
+
+[credential]
+  #helper = osxkeychain
+  helper = "cache --timeout=86400"
+
+[fetch]
+  prune = true
+
+[pull]
+  rebase = true
+
+[init]
+  defaultBranch = "main"
+
+[stash]
+  showPatch = true
+
+[color]
+  ui = true
+
+[help]
+  autocorrect = 1
+
+[alias]
+  st = status
+
+  br = branch --all
+  bl = for-each-ref --sort=committerdate --format='\
+%(committerdate) %(objectname:short) %(HEAD) \
+%(color:red)%(refname:short)%(color:reset): \
+%(contents:subject): %(authorname) \
+'
+  bs = name-rev --name-only HEAD
+
+  di = diff --color-words 
+  ds = di --staged
+
+  co = checkout -b
+  ci = commit -v
+
+  ps = push origin HEAD
+
+  sl = stash list -p
+  ss = stash show
+  sp = stash push --include-untracked -m "$(date '+%Y%m%d-%H%M%S')"
+
+  ua = !git ls-files --others --exclude-standard | xargs git add
+  uc = clean -i
+  cl = !git pull && git branch --merged | grep -v '*' | xargs git branch -d
+
+  l  = ls --graph
+  ls = log --pretty=format:'%ai %h %s: %an%C(red)%d%C(reset)' -n 24
+  ll = log --pretty=fuller -p
+  lt = ls -n 48 --reverse
