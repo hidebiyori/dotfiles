@@ -1,5 +1,6 @@
 ### Common ###
 export XDG_CONFIG_HOME="${HOME}/.config"
+export PATH="/usr/local/bin:/usr/bin:/bin"
 
 function load()
 {
@@ -39,7 +40,8 @@ export NVM_DIR="${HOME}/.config/nvm"
 load "${NVM_DIR}/nvm.sh"
 load "${NVM_DIR}/bash_completion"
 
-export PATH="${HOME}/.config/flutter/bin:${PATH}"
+export FLUTTER_DIR="${HOME}/.config/flutter"
+export PATH="${FLUTTER_DIR}/bin:${PATH}"
 
 export PATH="${HOME}/bin:${PATH}"
 load "${HOME}/.bashrc"

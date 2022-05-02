@@ -27,10 +27,11 @@ else
 fi
 
 GIT_ROOT="${HOME}/git"
-alias r="source ${HOME}/.bashrc"
+APP_ROOT="${GIT_ROOT}/hidebiyori-app"
+alias r="source ${HOME}/.bash_profile"
 alias u="${GIT_ROOT}/dotfiles/bin/install.sh && r"
-alias o="if [ x${TERM} != xscreen ]; then screen -U -D -R; fi"
-alias a="cd ${GIT_ROOT}/hidebiyori-app"
+alias o="if [[ ! x${TERM} =~ xscreen ]]; then screen -U -D -R; fi"
+alias a="cd ${APP_ROOT}"
 alias s="cd ${GIT_ROOT}/dotfiles"
 alias d="cd ${GIT_ROOT}"
 alias f="cd ${HOME}/var/000-docs"
@@ -53,6 +54,30 @@ alias v="\
   -c 'cd ${GIT_ROOT}/hidebiyori-app' \
 "
 alias b="vim -S ${HOME}/.vim/session"
+alias n="updateFlutter; updateFirebaseFunctions"
+
+function updateFlutter()
+{
+  pushd "${APP_ROOT}"
+  flutter upgrade
+  flutter pub outdated
+  flutter pub upgrade --major-versions
+  version=$(cat ${FLUTTER_DIR}/version)
+  perl -i -ple "s/(flutter-version: )'.+'/\1'${version}'/g" .github/workflows/*
+  git ci -m 'update flutter' pubspec.lock .github
+  popd
+}
+export -f updateFlutter
+
+function updateFirebaseFunctions()
+{
+  pushd "${APP_ROOT}/functions"
+  npx -p npm-check-updates -c 'ncu -u'
+  npm install
+  git ci -m 'update firebase functions' package.json package-lock.json
+  popd
+}
+export -f updateFirebaseFunctions
 
 uname="$(uname -a)"
 
