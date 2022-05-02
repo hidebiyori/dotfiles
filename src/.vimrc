@@ -56,7 +56,7 @@ set number
 set ruler
 set showtabline=2
 set laststatus=2
-set statusline=%<\ %f%y%{'['.(&fenc!=''?&fenc:&enc).']['.&ff.']'}%r%w%m%=%l,%c%V%5P
+set statusline=%<\ %f\ %y%{'['.(&fenc!=''?&fenc:&enc).']['.&ff.']'}%r%w%m%=%l,%c%V%5P
 set wildmenu
 set shellslash
 set cmdheight=1
@@ -83,6 +83,8 @@ nnoremap n nzz
 nnoremap N Nzz
 
 vnoremap <silent> * "vy/\V<C-r>=substitute(escape(@v,'\/'),"\n",'\\n','g')<CR><CR>
+
+inoremap <C-c> <ESC>
 
 augroup disableAutoFormat
   autocmd!
