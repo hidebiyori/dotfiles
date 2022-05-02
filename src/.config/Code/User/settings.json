@@ -1,0 +1,23 @@
+{
+    "workbench.editor.enablePreview": false,
+    "workbench.editor.showTabs": true,
+    "explorer.confirmDelete": false,
+    "files.insertFinalNewline": true,
+    "files.trimTrailingWhitespace": true,
+    "editor.formatOnType": true,
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2,
+    "editor.rulers": [
+        80
+    ],
+    "editor.quickSuggestions": {
+        "other": true,
+        "comments": true,
+        "strings": true
+    },
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true
+    },
+    "git.autofetch": true,
+    "git.enableSmartCommit": true
+}
