@@ -22,7 +22,7 @@ set backup
 set writebackup
 set backupdir=${HOME}/.vim/backup//
 
-set swapfile
+set noswapfile
 set directory=${HOME}/.vim/swap//
 
 set undofile

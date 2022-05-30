@@ -6,7 +6,7 @@ export EDITOR="vim"
 export HISTSIZE="5000"
 export HISTFILESIZE="5000"
 export HISTCONTROL="ignoreboth"
-export HISTIGNORE="?:exit"
+export HISTIGNORE="[hrw]:rm *:ls:exit"
 export HISTTIMEFORMAT="%Y-%m-%d %T "
 
 shopt -s histappend

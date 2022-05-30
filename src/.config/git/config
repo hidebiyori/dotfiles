@@ -48,7 +48,7 @@
   di = diff --color-words 
   ds = di --staged
 
-  co = checkout -b
+  co = checkout
   ci = commit -v
 
   ps = push origin HEAD
