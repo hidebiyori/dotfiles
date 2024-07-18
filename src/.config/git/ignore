@@ -25,3 +25,21 @@ ehthumbs.db
 ehthumbs_vista.db
 [Dd]esktop.ini
 $RECYCLE.BIN/
+
+
+### Intellij
+.idea
+*.iml
+
+
+### Python
+.runNumber
+.python-version
+
+
+### TypeScript
+tsconfig.tsbuildinfo
+
+
+### Other
+*secret*

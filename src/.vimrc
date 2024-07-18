@@ -45,11 +45,12 @@ set autoindent
 set smartindent
 
 set hlsearch
-set ignorecase
+"set ignorecase
 set smartcase
 set incsearch
 set wrapscan
 set nofoldenable
+set shortmess-=S
 
 set title
 set number
@@ -79,8 +80,8 @@ nnoremap <C-m><C-s> :execute('source' . mySessionFile)<CR>
 
 nnoremap <C-l> o<C-R>=expand('%:p')<CR><ESC>
 
-nnoremap n nzz
-nnoremap N Nzz
+"nnoremap n nzz
+"nnoremap N Nzz
 
 vnoremap <silent> * "vy/\V<C-r>=substitute(escape(@v,'\/'),"\n",'\\n','g')<CR><CR>
 
@@ -113,3 +114,5 @@ augroup enableAutoSaveSession
 augroup END
 
 colorscheme koehler
+"colorscheme default
+hi Search cterm=NONE ctermfg=black ctermbg=lightgrey

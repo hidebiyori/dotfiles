@@ -20,19 +20,24 @@ termcapinfo xterm* is=\E[r\E[m\E[2J\E[H\E[?7h\E[?1;4;6l
 termcapinfo xterm* ti@:te@
 
 # show prev window/current window/next window/user@host/loadavg/datetime
-hardstatus alwayslastline "%-w%50L>%{= w}%n %t%{-}%+w%-60<%=${USER}@%H[%l][%Y/%m/%d(%D)%0c]"
+hardstatus alwayslastline "%-w%50L>%{= w}%n %t%{-}%+w%-60< %= ${USER}@%H[%l][%Y/%m/%d(%D)%0c]"
 
 # open screen tabs and execute commands
 screen -t vim 0
-screen -t log 1
-screen -t cmd 2
-screen -t ref 3
-screen -t tmp 4
+screen -t ap1 1
+screen -t ap2 2
+screen -t dot 3
+screen -t var 4
+screen -t tmp 5
 select 0
 stuff "v\015"
 select 1
-stuff "git l\015"
+stuff "cd ${AP1_ROOT}\015"
 select 2
-stuff "git pull\015"
+stuff "cd ${AP2_ROOT}\015"
+select 3
+stuff "cd ${DOT_ROOT}\015"
+select 4
+stuff "cd ${HOME}/var\015"
 select 0
 select 2

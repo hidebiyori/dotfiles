@@ -66,7 +66,7 @@ function setBrew()
 
     mkdir -p "${targetPath}"
     curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "${targetPath}"
-    brew install bash-completion git pstree
+    brew install bash-completion git jq pstree
     brew install --cask google-chrome google-japanese-ime visual-studio-code
     brew doctor
   fi
@@ -75,7 +75,7 @@ function setBrew()
 function setScreencapture()
 {
   defaults write com.apple.screencapture location "${HOME}/Downloads"
-  defaults write com.apple.screencapture name "$(hostname)"
+  defaults write com.apple.screencapture name "s"
   defaults write com.apple.screencapture include-date -bool true
   defaults write com.apple.screencapture type png
   defaults read com.apple.screencapture
@@ -123,7 +123,7 @@ function setLink()
 
   # required: Chrome OS Share with Linux
   ln -sfnv "${localPath}/Downloads" "${HOME}/"
-  ln -sfnv "${drivePath}/000-docs" "${HOME}/var/"
+  ln -sfnv "${drivePath}" "${HOME}/"
 }
 
 function setNode()

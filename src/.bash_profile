@@ -1,6 +1,6 @@
 ### Common ###
 export XDG_CONFIG_HOME="${HOME}/.config"
-export PATH="/usr/local/bin:/usr/bin:/bin"
+export PATH="/usr/local/bin:/usr/sbin:/usr/bin:/bin"
 
 function load()
 {
@@ -23,7 +23,7 @@ uname="$(uname -a)"
 ### Mac ###
 if [[ "${uname}" =~ "Darwin" ]]; then
   load "/etc/bashrc"
-  load "/usr/local/etc/bash_completion"
+  load "${HOME}/.config/brew/etc/bash_completion"
   export PATH="${HOME}/.config/brew/bin:${PATH}"
 
 
