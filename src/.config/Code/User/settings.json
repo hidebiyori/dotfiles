@@ -1,6 +1,6 @@
 {
   "workbench.editor.enablePreview": false,
-  "workbench.editor.showTabs": true,
+  "workbench.editor.showTabs": "multiple",
   "explorer.confirmDelete": false,
   "files.insertFinalNewline": true,
   "files.trimTrailingWhitespace": true,
@@ -12,18 +12,31 @@
   "editor.quickSuggestions": {
     "other": true,
     "comments": true,
-    "strings": true
+    "strings": true,
   },
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true
+    "source.fixAll.eslint": "explicit",
   },
   "[typescriptreact]": {
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
     //     "editor.formatOnType": true,
     //     "editor.formatOnPaste": true
   },
   "git.autofetch": true,
   "git.enableSmartCommit": true,
   "settingsSync.keybindingsPerPlatform": false,
-  "workbench.colorTheme": "Default Dark+"
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "files.autoSave": "afterDelay",
+  "dart.flutterHotReloadOnSave": "all",
+  "dart.debugExternalPackageLibraries": false,
+  "dart.debugSdkLibraries": false,
+  "chat.tools.terminal.autoApprove": {
+    "yarn tsc": true,
+    "mkdir": true,
+    "git add": true,
+    "git commit": true,
+    "npm install": true,
+    "git rm": true,
+    "git check-ignore": true,
+  },
 }
