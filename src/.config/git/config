@@ -65,6 +65,6 @@
   cl = !git pull && git branch --merged | grep -v '*' | xargs git branch -d
 
   l  = ls --graph
-  ls = log --pretty=format:'%ai %h %s: %an%C(red)%d%C(reset)' -n 24
+  ls = log --pretty=format:'%ai %h %s: %an%C(red)%d%C(reset)' -n 24 --reverse
   ll = log --pretty=fuller -p
   lt = ls -n 48 --reverse
