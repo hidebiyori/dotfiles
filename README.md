@@ -25,6 +25,7 @@
 
 - 自作スキルは `src/.agents/skills/<skill-name>/SKILL.md` で管理する。
 - `bin/install.sh` は各ファイルを `~/.agents/skills` 以下へリンクする。
+- `japanese-commit`: 日本語の件名と複数行の本文で、変更内容・理由・検証結果を記載する。共通の `AGENTS.md` からコミット時の利用を指示する。
 - `npm-vulnerability-remediation`: Dependabot の検知を確認し、`npm update` を優先して修正・検証する。`npm audit` は診断用に使い、残る問題は依存経路と対応条件を記録する。
 - スキルだけを適用する場合（同名の既存フォルダがないことを確認して実行）:
 
