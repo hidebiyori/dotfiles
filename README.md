@@ -4,16 +4,45 @@ hidebiyori の複数端末で、シェル等の共通設定と開発ツールを
 
 - `src/`: Bash・Vim・Git・Codex 等の設定ファイル。ホームディレクトリへシンボリックリンクで配置する。
 - `bin/install.sh`: このリポジトリの取得・更新、設定のリンク、OS 別のセットアップ、
-  mise・Node（nvm）・Flutter・Firebase 等の導入をまとめて行う。
+  mise・Node（mise）・Flutter・Firebase 等の導入をまとめて行う。
 - 主な一括セットアップ対象は Mac と Chromebook の Linux 開発環境。
   Linux 分岐は apt と ChromeOS の共有フォルダを前提としている。
   Windows では WSL の環境に応じて内容を確認し、Git Bash では必要な設定・手順を個別に利用する。
 - セットアップは既存の設定ファイルをリンクで置き換えるため、残したい設定は事前に退避する。
   パッケージ更新や開発ツールのダウンロードも伴う。mise だけを入れる場合は下記の個別手順を使う。
-- install
-  - `bash -c "$(curl -s https://raw.githubusercontent.com/hidebiyori/dotfiles/main/bin/install.sh)"`
-  - restart terminal
-- update: `u`
+
+## 導入・更新の方針
+
+- OS のパッケージマネージャー（apt / Homebrew / winget）を優先する。
+- 取得したスクリプトをそのままシェルへ流す方法はなるべく使わない。
+  `curl ... | sh` だけでなく `bash -c "$(curl ...)"` も避ける。
+  スクリプトが必要な場合はファイルとして取得し、配布元と内容を確認してから実行する。
+  配布元が署名・チェックサムを提供していれば、それも検証する。
+- インストール済みの mise が生成する `eval "$(mise activate bash)"` や
+  Homebrew の shellenv はローカルの信頼したコマンドの出力を読み込むために使う。
+- 通信量を抑えるため、導入済みツールを活用し、検証のためだけの再インストールは行わない。
+
+初回は Git が導入済みの端末で次を実行する（既存の clone がある場合は取得を省く）。
+
+```bash
+mkdir -p "${HOME}/git"
+git clone https://github.com/hidebiyori/dotfiles.git "${HOME}/git/dotfiles"
+cd "${HOME}/git/dotfiles"
+less bin/install.sh
+```
+
+内容を確認した後、別の操作として実行する。
+
+```bash
+bash bin/install.sh
+```
+
+完了後はターミナルを開き直す。更新・再適用は従来どおり `u`。
+一括スクリプトはリポジトリの pull とツールの更新も行うため、
+上記は実行内容を固定・検証する仕組みではない。
+変更を事前確認したい場合は `git fetch` と `git diff HEAD..origin/main` で確認する。
+Homebrew 未導入時の既存処理も配布アーカイブを取得・展開して実行するため、
+可能なら事前に公式手順で Homebrew を導入し、配布元を信頼できることを確認する。
 
 ## Codex
 
@@ -50,7 +79,7 @@ hidebiyori の複数端末で、シェル等の共通設定と開発ツールを
 既存の `bin/install.sh` / `u` で mise も一括導入する。
 Mac は Homebrew、Chromebook / Debian・Ubuntu / WSL は extrepo と apt を使う。
 PATH 上または `~/.local/bin/mise` に導入済みなら追加インストールを省く。
-既存どおり OS のパッケージ更新や nvm・Flutter・Firebase の導入も行う。
+既存どおり OS のパッケージ更新や Node・Flutter・Firebase の導入も行う。
 Linux 分岐には Chromebook 固有のリンク作成等もあるため、WSL ではその内容を確認する。
 Windows ネイティブは一括スクリプトの対象外で、下記の Git Bash 手順を使う。
 
@@ -114,7 +143,7 @@ Linux 向けの環境が必要な場合は、上記の WSL 手順を使う。
 この dotfiles が配置済みなら `src/.bashrc` の設定で対話 Bash にのみ自動で有効化する。
 未導入時は何もしない。PATH 上の mise を優先し、見つからなければ公式インストーラーの
 配置先 `~/.local/bin/mise` を確認する。追加の activate 行は不要。
-`.bash_profile` は既存の PATH を保持し、nvm・Flutter の設定後に `.bashrc` を読み込む。
+`.bash_profile` は既存の PATH を保持し、Flutter の設定後に `.bashrc` を読み込む。
 
 未配置の場合は、既存の `~/.bashrc` に上記 `src/.bashrc` の mise ブロックだけを追加してもよい。
 Bash ログインシェルでは既存の `~/.bash_profile` 等から `~/.bashrc` が読まれることも確認する。
@@ -128,8 +157,43 @@ mise --version
 mise doctor
 ```
 
-mise 本体の導入だけでは Node 等は移行されない。既存の nvm / Flutter は今回維持している。
-同じツールを両方で管理すると PATH の優先順位が変わるため、移行はツールごとに行う。
+### Node を nvm から mise に移行する
+
+一括スクリプトは nvm を取得せず、次で Node の LTS を共通の既定値として設定する。
+Yarn と Firebase CLI は mise の Node を明示してインストールするので、
+非対話シェルや実行元プロジェクトの Node 設定に依存しない。
+
+```bash
+mise use --global node@lts
+mise exec node@lts -- npm install -g yarn
+mise exec node@lts -- npm install -g firebase-tools
+```
+
+この部分だけを実行すれば、OS 全体や Flutter を更新せずに Node を移行できる。
+LTS は固定バージョンではなく、一括スクリプトの再実行時には新しい LTS に更新され得る。
+
+`.bash_profile` の nvm 初期化は削除済み。既に開いているシェルには nvm の関数や
+PATH が残るため、端末アプリを終了して開き直す（`r` だけでは残る）。
+別のシェル設定に nvm の初期化や PATH がある場合も取り除く。
+その後、次の結果が nvm 配下ではなく mise 管理の Node を指すことを確認する。
+
+```bash
+command -v node
+node --version
+npm --version
+mise which node
+yarn --version
+firebase --version
+```
+
+以前の `~/.config/nvm`（別方式では `~/.nvm`）やグローバルパッケージは
+自動削除・移行しない。必要なら切替前に `npm ls -g --depth=0` で一覧を控え、
+必要なものだけ mise 側で再導入する。グローバルパッケージは Node のバージョンごとに
+再導入が必要になる場合がある。プロジェクトの動作確認後、不要になった
+nvm ディレクトリを手動で削除する。Flutter の管理方法は変更しない。
+`.nvmrc` があるだけで従来どおり自動選択されるとは扱わず、
+プロジェクトに対応する Node バージョンを mise で設定する。
+
 プロジェクトでバージョンを選ぶ例（設定ファイルの変更とダウンロードを伴う）:
 
 ```bash

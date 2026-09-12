@@ -42,10 +42,6 @@ fi
 
 
 ### Common ###
-export NVM_DIR="${HOME}/.config/nvm"
-load "${NVM_DIR}/nvm.sh"
-load "${NVM_DIR}/bash_completion"
-
 export FLUTTER_DIR="${HOME}/.config/flutter"
 export PATH="${FLUTTER_DIR}/bin:${PATH}"
 

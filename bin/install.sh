@@ -11,11 +11,6 @@ function setOptions()
   set -xeuo pipefail
 }
 
-function removeOptions()
-{
-  set +xeuo pipefail
-}
-
 function setDirectories()
 {
   mkdir -p "${HOME}"/{.config,.vim/{backup,swap,undo},bin,var,tmp,old}
@@ -75,7 +70,10 @@ function setBrew()
 
 function setMise()
 {
-  if command -v mise >/dev/null 2>&1 || [ -x "${HOME}/.local/bin/mise" ]; then
+  if command -v mise >/dev/null 2>&1; then
+    return
+  elif [ -x "${HOME}/.local/bin/mise" ]; then
+    export PATH="${HOME}/.local/bin:${PATH}"
     return
   fi
 
@@ -89,6 +87,7 @@ function setMise()
     sudo apt install -y mise
   else
     echo "mise: この OS では README.md の手動導入手順を参照してください。" >&2
+    return 1
   fi
 }
 
@@ -148,18 +147,9 @@ function setLink()
 
 function setNode()
 {
-  # https://github.com/nvm-sh/nvm#manual-install
-  export NVM_DIR="${HOME}/.config/nvm"
-
-  setGitRepository "https://github.com/nvm-sh/nvm.git" "${NVM_DIR}"
-  removeOptions
-  \source "${NVM_DIR}/nvm.sh"
-  nvm install --lts
-  nvm use --lts
-  nvm alias default lts/*
-  setOptions
-
-  npm install -g yarn
+  # Keep the previous LTS policy; do not depend on interactive shell activation.
+  mise use --global node@lts
+  mise exec node@lts -- npm install -g yarn
 }
 
 function setFlutter()
@@ -177,7 +167,7 @@ function setFlutter()
 function setFirebase()
 {
   # https://firebase.google.com/docs/cli
-  npm install -g firebase-tools
+  mise exec node@lts -- npm install -g firebase-tools
 
   # memo
   # firebase login --no-localhost
