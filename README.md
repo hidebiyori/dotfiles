@@ -1,6 +1,15 @@
 # dotfiles
 
-- dotfiles for hidebiyori
+hidebiyori の複数端末で、シェル等の共通設定と開発ツールを一括セットアップ・更新するためのリポジトリ。
+
+- `src/`: Bash・Vim・Git・Codex 等の設定ファイル。ホームディレクトリへシンボリックリンクで配置する。
+- `bin/install.sh`: このリポジトリの取得・更新、設定のリンク、OS 別のセットアップ、
+  mise・Node（nvm）・Flutter・Firebase 等の導入をまとめて行う。
+- 主な一括セットアップ対象は Mac と Chromebook の Linux 開発環境。
+  Linux 分岐は apt と ChromeOS の共有フォルダを前提としている。
+  Windows では WSL の環境に応じて内容を確認し、Git Bash では必要な設定・手順を個別に利用する。
+- セットアップは既存の設定ファイルをリンクで置き換えるため、残したい設定は事前に退避する。
+  パッケージ更新や開発ツールのダウンロードも伴う。mise だけを入れる場合は下記の個別手順を使う。
 - install
   - `bash -c "$(curl -s https://raw.githubusercontent.com/hidebiyori/dotfiles/main/bin/install.sh)"`
   - restart terminal
@@ -35,3 +44,102 @@
   ```
 
 - ファイル単位でインストールしたスキルを削除・改名した場合は、配置先に残る古いリンクも削除する。
+
+## mise
+
+既存の `bin/install.sh` / `u` で mise も一括導入する。
+Mac は Homebrew、Chromebook / Debian・Ubuntu / WSL は extrepo と apt を使う。
+PATH 上または `~/.local/bin/mise` に導入済みなら追加インストールを省く。
+既存どおり OS のパッケージ更新や nvm・Flutter・Firebase の導入も行う。
+Linux 分岐には Chromebook 固有のリンク作成等もあるため、WSL ではその内容を確認する。
+Windows ネイティブは一括スクリプトの対象外で、下記の Git Bash 手順を使う。
+
+以下は mise だけを個別に導入する場合の手順。
+
+### Chromebook / Debian・Ubuntu / Windows の WSL
+
+Chromebook は Linux 開発環境のターミナル、WSL は Linux 側で実行する。
+対象は Debian 11 以降 / Ubuntu 22.04 以降（`cat /etc/os-release` で確認）。
+
+```bash
+sudo apt update
+sudo apt install -y extrepo
+sudo extrepo enable mise
+sudo apt update
+sudo apt install -y mise
+```
+
+最初の update は extrepo の取得用、2 回目は追加した mise リポジトリの取得用。
+`extrepo enable mise` が失敗した場合はそこで止め、OS の対応状況やエラーを確認する。
+Windows 側に導入した mise と WSL 側の mise・管理ツールは別々に扱う。
+
+### macOS
+
+Homebrew が導入済みで `brew --version` が通るターミナルで実行する。
+未導入の場合は [Homebrew の公式手順](https://brew.sh/) で導入し、
+インストーラーが示す shellenv の設定を済ませる。
+
+```bash
+brew install mise
+```
+
+この dotfiles の Bash 設定は標準の Homebrew（Apple Silicon / Intel）と
+従来の `~/.config/brew` を考慮している。Zsh を使う場合は Bash 設定は読まれないため、
+使用中の `${ZDOTDIR:-$HOME}/.zshrc` に次を一度だけ記載する。
+Homebrew の shellenv 設定より後に置く。
+
+```zsh
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate zsh)"
+fi
+```
+
+### Windows ネイティブ（Git Bash）
+
+コマンドプロンプトで以下を実行し、インストール後は Git Bash を開き直す。
+
+```bat
+winget install --id jdx.mise --exact
+```
+
+Git Bash で `command -v mise` が通ることを確認し、次の Bash の有効化を行う。
+見つからない場合は Windows 側の PATH に winget のインストール先が反映されているか確認する。
+既存のセットアップ全体は Windows 対応済みではないため、`bin/install.sh` は実行せず、
+mise の有効化ブロックだけを既存の `~/.bashrc` に追加する。
+Windows ネイティブでは管理対象ツールやタスクも Windows に対応している必要がある。
+Linux 向けの環境が必要な場合は、上記の WSL 手順を使う。
+
+### Bash での有効化と確認
+
+この dotfiles が配置済みなら `src/.bashrc` の設定で対話 Bash にのみ自動で有効化する。
+未導入時は何もしない。PATH 上の mise を優先し、見つからなければ公式インストーラーの
+配置先 `~/.local/bin/mise` を確認する。追加の activate 行は不要。
+`.bash_profile` は既存の PATH を保持し、nvm・Flutter の設定後に `.bashrc` を読み込む。
+
+未配置の場合は、既存の `~/.bashrc` に上記 `src/.bashrc` の mise ブロックだけを追加してもよい。
+Bash ログインシェルでは既存の `~/.bash_profile` 等から `~/.bashrc` が読まれることも確認する。
+Mac で Zsh を使う場合に `.bashrc` 全体を source しない。
+
+ターミナルを開き直し、次で確認する。
+
+```bash
+command -v mise
+mise --version
+mise doctor
+```
+
+mise 本体の導入だけでは Node 等は移行されない。既存の nvm / Flutter は今回維持している。
+同じツールを両方で管理すると PATH の優先順位が変わるため、移行はツールごとに行う。
+プロジェクトでバージョンを選ぶ例（設定ファイルの変更とダウンロードを伴う）:
+
+```bash
+mise use node@24
+node --version
+```
+
+既存プロジェクトでは設定内容を確認してから `mise install` を実行する。
+スクリプトや CI は対話シェルの activate に依存せず `mise exec -- <command>` を使う。
+更新は導入元の apt / Homebrew / winget で行い、別方式で重複インストールしない。
+
+参考: [mise の公式インストール手順](https://mise.jdx.dev/installing-mise.html)、
+[シェルの有効化](https://mise.jdx.dev/cli/activate.html)。

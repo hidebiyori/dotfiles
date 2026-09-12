@@ -1,6 +1,6 @@
 ### Common ###
 export XDG_CONFIG_HOME="${HOME}/.config"
-export PATH="/usr/local/bin:/usr/sbin:/usr/bin:/bin"
+export PATH="/usr/local/bin:/usr/sbin:/usr/bin:/bin${PATH:+:${PATH}}"
 
 function load()
 {
@@ -22,6 +22,12 @@ uname="$(uname -a)"
 
 ### Mac ###
 if [[ "${uname}" =~ "Darwin" ]]; then
+  # Support standard Apple Silicon / Intel Homebrew as well as the legacy install.
+  if [ -x /opt/homebrew/bin/brew ]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  elif [ -x /usr/local/bin/brew ]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+  fi
   load "/etc/bashrc"
   load "${HOME}/.config/brew/etc/bash_completion"
   export PATH="${HOME}/.config/brew/bin:${PATH}"

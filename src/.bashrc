@@ -106,6 +106,15 @@ elif [[ "${uname}" =~ "Linux" ]]; then
 fi
 
 
+# Activate after nvm/Flutter PATH setup; skip missing mise and non-interactive shells.
+if [[ $- == *i* ]]; then
+  if command -v mise >/dev/null 2>&1; then
+    eval "$(mise activate bash)"
+  elif [ -x "${HOME}/.local/bin/mise" ]; then
+    eval "$("${HOME}/.local/bin/mise" activate bash)"
+  fi
+fi
+
 ### Common ###
 if [ "${PWD}" = "${HOME}" ]; then
   o

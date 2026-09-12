@@ -66,9 +66,29 @@ function setBrew()
 
     mkdir -p "${targetPath}"
     curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "${targetPath}"
+    export PATH="${targetPath}/bin:${PATH}"
     brew install bash-completion git jq pstree
     brew install --cask google-chrome google-japanese-ime visual-studio-code
     brew doctor
+  fi
+}
+
+function setMise()
+{
+  if command -v mise >/dev/null 2>&1 || [ -x "${HOME}/.local/bin/mise" ]; then
+    return
+  fi
+
+  if [[ "${uname}" =~ "Darwin" ]]; then
+    brew install mise
+  elif [[ "${uname}" =~ "Linux" ]]; then
+    sudo apt update
+    sudo apt install -y extrepo
+    sudo extrepo enable mise
+    sudo apt update
+    sudo apt install -y mise
+  else
+    echo "mise: この OS では README.md の手動導入手順を参照してください。" >&2
   fi
 }
 
@@ -176,11 +196,13 @@ uname="$(uname -a)"
 if [[ "${uname}" =~ "Darwin" ]]; then
   setBrew
   setScreencapture
+  setMise
 
 
 ### Linux ###
 elif [[ "${uname}" =~ "Linux" ]]; then
   setApt
+  setMise
   setJapanese
   setVisualStudioCode
   setLink
