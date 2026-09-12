@@ -4,7 +4,7 @@ hidebiyori の複数端末で、シェル等の共通設定と開発ツールを
 
 - `src/`: Bash・Vim・Git・Codex 等の設定ファイル。ホームディレクトリへシンボリックリンクで配置する。
 - `bin/install.sh`: このリポジトリの取得・更新、設定のリンク、OS 別のセットアップ、
-  mise・Node（mise）・Flutter・Firebase 等の導入をまとめて行う。
+  mise・Node（mise）・Firebase 等の導入をまとめて行う。Flutter は任意。
 - 主な一括セットアップ対象は Mac と Chromebook の Linux 開発環境。
   Linux 分岐は apt と ChromeOS の共有フォルダを前提としている。
   Windows では WSL の環境に応じて内容を確認し、Git Bash では必要な設定・手順を個別に利用する。
@@ -44,6 +44,19 @@ bash bin/install.sh
 Homebrew 未導入時の既存処理も配布アーカイブを取得・展開して実行するため、
 可能なら事前に公式手順で Homebrew を導入し、配布元を信頼できることを確認する。
 
+## Flutter（任意）
+
+通常の `bin/install.sh` / `u` では Flutter の導入・更新・precache・doctor を実行しない。
+Flutter も必要な端末では、次のように一度の実行に限って指定する。
+
+```bash
+INSTALL_FLUTTER=1 bash bin/install.sh
+```
+
+このコマンドは Flutter だけでなく、通常の一括セットアップも行う。
+既存の Flutter ディレクトリや Bash の Flutter 用 PATH・補助関数は維持する。
+導入済みの Flutter を引き続き利用でき、明示的な補助コマンドによる更新も従来どおり行える。
+
 ## Codex
 
 - ユーザー共通の指示は `src/.codex/AGENTS.md` で管理する。
@@ -79,7 +92,7 @@ Homebrew 未導入時の既存処理も配布アーカイブを取得・展開�
 既存の `bin/install.sh` / `u` で mise も一括導入する。
 Mac は Homebrew、Chromebook / Debian・Ubuntu / WSL は extrepo と apt を使う。
 PATH 上または `~/.local/bin/mise` に導入済みなら追加インストールを省く。
-既存どおり OS のパッケージ更新や Node・Flutter・Firebase の導入も行う。
+既存どおり OS のパッケージ更新や Node・Firebase の導入も行う。Flutter は明示指定した場合のみ導入・更新する。
 Linux 分岐には Chromebook 固有のリンク作成等もあるため、WSL ではその内容を確認する。
 Windows ネイティブは一括スクリプトの対象外で、下記の Git Bash 手順を使う。
 
@@ -188,7 +201,7 @@ firebase --version
 自動削除・移行しない。必要なら切替前に `npm ls -g --depth=0` で一覧を控え、
 必要なものだけ mise 側で再導入する。グローバルパッケージは Node のバージョンごとに
 再導入が必要になる場合がある。プロジェクトの動作確認後、不要になった
-nvm ディレクトリを手動で削除する。Flutter の管理方法は変更しない。
+nvm ディレクトリを手動で削除する。既存の Flutter 環境は削除しない。
 `.nvmrc` があるだけで従来どおり自動選択されるとは扱わず、
 プロジェクトに対応する Node バージョンを mise で設定する。
 

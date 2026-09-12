@@ -202,6 +202,8 @@ fi
 
 ### Common ###
 setNode
-setFlutter
+if [[ "${INSTALL_FLUTTER:-0}" == "1" ]]; then
+  setFlutter
+fi
 setFirebase
 echo "Success: ${0}"
