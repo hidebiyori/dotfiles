@@ -160,12 +160,11 @@ mise doctor
 ### Node を nvm から mise に移行する
 
 一括スクリプトは nvm を取得せず、次で Node の LTS を共通の既定値として設定する。
-Yarn と Firebase CLI は mise の Node を明示してインストールするので、
+Firebase CLI は mise の Node を明示してインストールするので、
 非対話シェルや実行元プロジェクトの Node 設定に依存しない。
 
 ```bash
 mise use --global node@lts
-mise exec node@lts -- npm install -g yarn
 mise exec node@lts -- npm install -g firebase-tools
 ```
 
@@ -182,7 +181,6 @@ command -v node
 node --version
 npm --version
 mise which node
-yarn --version
 firebase --version
 ```
 

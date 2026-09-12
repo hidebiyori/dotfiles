@@ -149,7 +149,6 @@ function setNode()
 {
   # Keep the previous LTS policy; do not depend on interactive shell activation.
   mise use --global node@lts
-  mise exec node@lts -- npm install -g yarn
 }
 
 function setFlutter()
