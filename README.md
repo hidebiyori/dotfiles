@@ -74,6 +74,36 @@ INSTALL_FLUTTER=1 bash bin/install.sh
 
 ## 個人共通のスキル
 
+### スキル用 Python 環境
+
+`bin/install.sh` は `~/.local/share/codex-skill-python` に共通の仮想環境を作り、
+`bin/requirements-skill-python.txt` の PyYAML を導入する。
+システム Python や各リポジトリの依存関係は変更せず、通常の `python3` の参照先も変えない。
+導入済みで指定バージョンを満たす場合は通信・再インストールを省く。
+
+今回の環境だけを準備する場合は、一括セットアップを実行せず次の手順を使う。
+
+```bash
+# Debian / Ubuntu / Chromebook / WSL: venv が未導入の場合のみ
+sudo apt install python3-venv
+# macOS: Python 3 が未導入の場合のみ brew install python
+bash ~/git/dotfiles/bin/setup-skill-python.sh
+```
+
+任意のリポジトリから標準のスキル検証を実行できる。
+
+```bash
+~/.local/share/codex-skill-python/bin/python \
+  ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
+  ~/.agents/skills/npm-vulnerability-remediation
+```
+
+`CODEX_HOME` が異なる場合やスキルの配置が変わった場合は、検証スクリプトのパスを合わせる。
+環境が壊れた場合は自動で削除しない。Python の更新後などに実行できなくなった場合は、
+内容を確認して退避してからセットアップし直す。Windows ネイティブはこの手順の対象外。
+
+### 管理するスキル
+
 - 自作スキルは `src/.agents/skills/<skill-name>/SKILL.md` で管理する。
 - `bin/install.sh` は各ファイルを `~/.agents/skills` 以下へリンクする。
 - `japanese-commit`: 日本語の件名と複数行の本文で、変更内容・理由・検証結果を記載する。共通の `AGENTS.md` からコミット時の利用を指示する。

@@ -184,6 +184,7 @@ uname="$(uname -a)"
 ### Mac ###
 if [[ "${uname}" =~ "Darwin" ]]; then
   setBrew
+  brew list --versions python >/dev/null 2>&1 || brew install python
   setScreencapture
   setMise
 
@@ -191,6 +192,7 @@ if [[ "${uname}" =~ "Darwin" ]]; then
 ### Linux ###
 elif [[ "${uname}" =~ "Linux" ]]; then
   setApt
+  sudo apt install -y python3-venv
   setMise
   setJapanese
   setVisualStudioCode
@@ -201,6 +203,7 @@ fi
 
 
 ### Common ###
+bash "${PJ_ROOT}/bin/setup-skill-python.sh"
 setNode
 if [[ "${INSTALL_FLUTTER:-0}" == "1" ]]; then
   setFlutter
