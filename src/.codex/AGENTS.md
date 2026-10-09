@@ -22,3 +22,11 @@
 
 - スキル付属の Python スクリプト（例: `skill-creator` の `quick_validate.py`）には、導入済みの `~/.local/share/codex-skill-python/bin/python` を優先する。PyYAML を含む共通の仮想環境で、作業リポジトリの依存関係とは分離している。
 - 環境がない場合は `~/git/dotfiles/bin/setup-skill-python.sh` と README の手順を参照する。通常の検証では再作成・再インストールをせず、プロジェクト固有の Python 環境はそのリポジトリの指示を優先する。
+
+# Chrome / Playwright の接続
+
+- Chromebook の ChromeOS 側の Chrome を調査するとき、Linux 側で `Playwright Extension not found` が出ても、拡張機能が未導入・接続不能と断定しない。導入済みの Playwright MCP と接続リンクを使う方法を確認する。
+- 共通手順は `~/git/dotfiles/docs/playwright-extension.md` を参照する。通常の接続が使える場合はその接続を再利用し、不要な再インストール・ブラウザーのダウンロードは行わない。
+- 接続を新しく作る場合はチャットごとのクライアントを用意し、ユーザーに対象タブを選択してもらう。他のチャットで使用中の接続・プロセスを終了したり、調査中のタブを奪ったりしない。
+- 接続 URL はクライアント起動ごとに生成する。過去の URL・ポート・接続 ID を流用せず、Git 管理のファイルには保存しない。
+- 接続待ちと接続成功を区別し、接続後は実際の URL・タイトルを確認してから対象サイトを操作する。リロードや移動の必要性と作業中の入力への影響を確認する。

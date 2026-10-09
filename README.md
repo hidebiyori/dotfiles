@@ -72,6 +72,12 @@ INSTALL_FLUTTER=1 bash bin/install.sh
 - 反映には Codex の新しいセッションを開始する。`AGENTS.override.md` がある場合はそちらが優先される。
 - 方針: 作業完了・検証後に今回の変更だけをコミットし、push は明示的な依頼時に行う。
 
+### Chromebook の Chrome / Playwright 接続
+
+ChromeOS 側の Chrome に導入済みの拡張機能を Linux 側から自動検出できない場合は、
+[Playwright MCP の接続リンクを使う手順](docs/playwright-extension.md)を参照する。
+共通の `AGENTS.md` からも参照し、他のプロジェクトで同じ接続方法を利用できる。
+
 ## 個人共通のスキル
 
 ### スキル用 Python 環境
