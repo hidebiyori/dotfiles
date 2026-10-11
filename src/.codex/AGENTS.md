@@ -28,6 +28,13 @@
 - 必要な通信は対象・回数を最小限にする。通信や再インストールを省いたために確認できない項目は、その制約を明記し、検証成功と扱わない。
 - スキルがクリーンインストールなどを推奨していても、この通信量に関するユーザー方針を優先する。
 
+# Firebase / GitHub Actions の公開認証
+
+- 公開用の GitHub Secret がないことだけで認証設定をユーザーへ依頼せず、既存の別プロジェクトの workflow、過去チャット、導入済みの `gcloud` とローカル ADC を先に確認する。共通手順は `~/git/dotfiles/docs/firebase-deploy-auth.md` を参照する。
+- `gcloud` の通常のアクティブアカウントがなくても、既存の ADC を `CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE` に指定して読み取りが通る場合がある。認証ファイルの本文・トークンを表示せず、対象プロジェクトの読み取りと必要な管理権限を確認する。再ログインやツールの再導入は必要性を確認してから行う。
+- 新しい GitHub Actions の公開認証は、長期サービスアカウント鍵より Workload Identity Federation / OIDC を優先する。対象リポジトリと所有者の数値 ID、公開ブランチ、公開イベントを制限し、公開専用サービスアカウントに必要な権限だけを与える。
+- 同じ Firebase プロジェクトに複数 Hosting サイトがある場合は、デプロイ先の Hosting target を明示する。公開は検証成功後だけに実行し、マージ・認証設定・デプロイ成功・本番反映を区別して確認する。
+
 # スキル用 Python
 
 - スキル付属の Python スクリプト（例: `skill-creator` の `quick_validate.py`）には、導入済みの `~/.local/share/codex-skill-python/bin/python` を優先する。PyYAML を含む共通の仮想環境で、作業リポジトリの依存関係とは分離している。

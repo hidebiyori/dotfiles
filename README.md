@@ -78,6 +78,12 @@ ChromeOS 側の Chrome に導入済みの拡張機能を Linux 側から自動�
 [Playwright MCP の接続リンクを使う手順](docs/playwright-extension.md)を参照する。
 共通の `AGENTS.md` からも参照し、他のプロジェクトで同じ接続方法を利用できる。
 
+### Firebase / GitHub Actions の公開認証
+
+別プロジェクトで設定した認証を調べる順序と、既存 ADC の利用、鍵を作らない
+GitHub OIDC の方針は [Firebase 公開認証の手順](docs/firebase-deploy-auth.md)を参照する。
+共通の `AGENTS.md` からも参照する。
+
 ## 個人共通のスキル
 
 ### スキル用 Python 環境
