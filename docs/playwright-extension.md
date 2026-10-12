@@ -5,10 +5,36 @@ Linux 開発環境から ChromeOS 側の Chrome を使うときの代替手順�
 Playwright MCP の拡張接続方式を使い、導入済みツールだけで準備する。
 他の OS や別バージョンの MCP で同じ動作になることは未確認。
 
+## 通常は自動起動を無効にする
+
+Playwright MCP は必要なブラウザ検証の時だけ起動する。
+通常は `~/.codex/config.toml` の既存の `[mcp_servers.playwright]` に
+`enabled = false` を追加する。既に `enabled` があれば値を変更し、同じテーブルを重複させない。
+`CODEX_HOME` を指定している場合は、そのディレクトリの設定を使う。
+
+```toml
+[mcp_servers.playwright]
+enabled = false
+# 既存の command、args、timeout 等は残す。
+```
+
+この設定は Codex による共通 MCP の自動起動を止めるためのもの。
+下記のチャット専用クライアントは、保存された実行パスを使って個別に起動できる。
+`AGENTS.md` の使用制限だけでは自動起動は止まらない。
+設定の反映状況は新しいセッションで確認し、進行中のチャットを中断したり、
+反映のためにアプリを再起動したりしない。
+
+原因不明のエラー、JavaScript の実行時エラー、ブラウザ固有の問題、
+UI の表示・操作不具合など、共通 `AGENTS.md` の例外に該当する検証では使用してよい。
+通常の内容確認には、まず `curl` などを使う。
+
 ## 適用する状況
 
+必要な検証で、共通 MCP を自動起動せずにチャット専用の接続を作る場合に使う。
+既にこのチャットの接続が使える場合は、新しく起動せず再利用する。
+
 通常の `browser_tabs` 等が `Playwright Extension not found` を返す一方、
-ChromeOS 側の Chrome には Playwright Extension が導入されている場合に使う。
+ChromeOS 側の Chrome には Playwright Extension が導入されている場合にも使う。
 Linux 側の Chrome のプロファイルを調べたエラーだけでは、ChromeOS 側の拡張の有無は分からない。
 通常の接続が使える場合は、そちらを優先する。
 
@@ -138,9 +164,31 @@ nodeRepl.write(await pwRpc('tools/call', { name: pwRunTool.name,
 ## 終了と引き継ぎ
 
 接続を維持する依頼がある間はクライアントを終了しない。
-使い終わったら、このチャットで起動した `pwClient` だけを終了する。
+使い終わったら、このチャットで起動した `pwClient` の標準入力を閉じ、正常終了を待つ。
+終了しない場合はそのクライアントだけに `SIGTERM` を送り、再び終了を確認する。
 他の MCP プロセスや Chrome を一括終了しない。
+
+```javascript
+var pwExit = pwClient.exitCode !== null || pwClient.signalCode !== null
+  ? Promise.resolve(true)
+  : new Promise(resolve => pwClient.once('exit', () => resolve(true)));
+var pwWaitForExit = () => Promise.race([
+  pwExit,
+  new Promise(resolve => setTimeout(() => resolve(false), 5000)),
+]);
+if (!pwClient.stdin.destroyed) pwClient.stdin.end();
+var pwHasExited = await pwWaitForExit();
+if (!pwHasExited) {
+  pwClient.kill('SIGTERM');
+  pwHasExited = await pwWaitForExit();
+}
+nodeRepl.write({ pid: pwClient.pid, exited: pwHasExited });
+if (pwHasExited) await pwFs.rm(pwDirectory, { recursive: true, force: true });
+```
+
+終了を確認できなかった場合は強制終了せず、残った PID と状況を報告する。
 保存した接続 URL が不要になったら、自分で作成した `pwDirectory` だけを削除する。
+上のコードは、終了を確認した場合にこのディレクトリを削除する。
 MCP が `.playwright-mcp/` にログを生成する場合があるが、コミット対象には含めない。
 
 共通指示は `src/.codex/AGENTS.md` にあり、`~/.codex/AGENTS.md` のリンクから
