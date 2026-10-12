@@ -112,6 +112,10 @@ python3 ~/git/dotfiles/bin/setup-chatgpt-maximized.py
 
 ### Chromebook の Chrome / Playwright 接続
 
+Playwright MCP は通常、既存の `~/.codex/config.toml` の `[mcp_servers.playwright]` で
+`enabled = false` にし、必要なブラウザ検証の時だけチャット専用クライアントを起動・終了する。
+実行パス・引数は残す。`AGENTS.md` への指示だけでは MCP の自動起動は止まらない。
+
 ChromeOS 側の Chrome に導入済みの拡張機能を Linux 側から自動検出できない場合は、
 [Playwright MCP の接続リンクを使う手順](docs/playwright-extension.md)を参照する。
 共通の `AGENTS.md` からも参照し、他のプロジェクトで同じ接続方法を利用できる。
