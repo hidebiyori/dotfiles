@@ -72,6 +72,44 @@ INSTALL_FLUTTER=1 bash bin/install.sh
 - 反映には Codex の新しいセッションを開始する。`AGENTS.override.md` がある場合はそちらが優先される。
 - 方針: 作業が一段落し、必要な検証と差分確認を終えた変更だけをコミット・push し、原則として PR 作成・必須 CI 確認・マージまで進める。ローカルのみ・レビュー待ち等の個別指定は優先する。マージで公開が起動する場合は結果と必要な公開確認まで行う。
 
+### Chromebook で Codex / ChatGPT を最大化して起動
+
+Linux アプリが毎回小さいウィンドウで起動する場合は、次の設定を一度実行する。
+追加パッケージの導入やアプリの再起動は行わない。
+
+```bash
+python3 ~/git/dotfiles/bin/setup-chatgpt-maximized.py
+```
+
+`~/.local/bin/chatgpt-maximized` とユーザー用の `chatgpt.desktop` を配置し、
+通常のアプリアイコンから補正ランチャーを使う。
+名前・アイコン・ファイル関連付けは既存の desktop entry を引き継ぐ。
+次回、アプリを終了した状態からアイコンで起動すると、
+`~/.codex/.codex-global-state.json` の最大化フラグを `true` に補正して起動する。
+`CODEX_HOME` を指定している場合はその保存先を使う。
+既に起動している場合は保存情報を変更せず、既存のアプリへ起動引数を渡す。
+`/usr/bin/chatgpt` を直接実行する場合は補正されない。
+`bin/install.sh` の Linux セットアップでも、アプリ導入済みの場合に適用する。
+
+補正前の保存情報は、同じフォルダの
+`.codex-global-state.json.before-maximized-launcher` へ直前の一世代を退避する。
+保存情報と退避ファイルは本人だけが読み書きできる権限で配置し、Git には含めない。
+アプリの内部保存形式を利用するため、不正な JSON や想定外の保存形式では
+保存情報を変更せず、通常の起動を続ける。
+
+起動せずに補正処理だけを確認する場合:
+
+```bash
+~/.local/bin/chatgpt-maximized --prepare-only
+```
+
+元に戻す場合は、ユーザー用の `~/.local/share/applications/chatgpt.desktop` を削除する。
+設定前にユーザー用の desktop entry が存在していた場合は、削除の代わりに
+`~/.local/state/dotfiles/chatgpt.desktop.before-maximized-launcher` から復元する。
+`XDG_DATA_HOME` / `XDG_STATE_HOME` がある場合は、それぞれの保存先を使う。
+必要に応じて `update-desktop-database ~/.local/share/applications` を実行する。
+ランチャーのリンクも不要なら `~/.local/bin/chatgpt-maximized` を削除する。
+
 ### Chromebook の Chrome / Playwright 接続
 
 ChromeOS 側の Chrome に導入済みの拡張機能を Linux 側から自動検出できない場合は、

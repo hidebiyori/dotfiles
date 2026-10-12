@@ -197,6 +197,7 @@ elif [[ "${uname}" =~ "Linux" ]]; then
   setJapanese
   setVisualStudioCode
   setLink
+  python3 "${PJ_ROOT}/bin/setup-chatgpt-maximized.py"
 
 
 fi
