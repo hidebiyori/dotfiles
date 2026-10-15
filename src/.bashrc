@@ -99,8 +99,9 @@ if [[ "${uname}" =~ "Darwin" ]]; then
 elif [[ "${uname}" =~ "Linux" ]]; then
   alias ls="ls --color"
 
-  # required: sudo apt install chromium
-  export CHROME_EXECUTABLE=/usr/bin/chromium
+  if [ -x /usr/bin/chromium ]; then
+    export CHROME_EXECUTABLE=/usr/bin/chromium
+  fi
 
 
 fi

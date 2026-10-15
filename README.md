@@ -5,9 +5,9 @@ hidebiyori の複数端末で、シェル等の共通設定と開発ツールを
 - `src/`: Bash・Vim・Git・Codex 等の設定ファイル。ホームディレクトリへシンボリックリンクで配置する。
 - `bin/install.sh`: このリポジトリの取得・更新、設定のリンク、OS 別のセットアップ、
   mise・Node（mise）・Firebase 等の導入をまとめて行う。Flutter は任意。
-- 主な一括セットアップ対象は Mac と Chromebook の Linux 開発環境。
-  Linux 分岐は apt と ChromeOS の共有フォルダを前提としている。
-  Windows では WSL の環境に応じて内容を確認し、Git Bash では必要な設定・手順を個別に利用する。
+- 一括セットアップ対象は Mac、Chromebook の Linux 開発環境、Windows 11 の WSL2（Debian / Ubuntu）。
+  Linux 分岐は apt を使用し、WSL では ChromeOS 専用処理を省く。
+  Windows ネイティブの Git Bash では必要な設定・手順を個別に利用する。
 - セットアップは既存の設定ファイルをリンクで置き換えるため、残したい設定は事前に退避する。
   パッケージ更新や開発ツールのダウンロードも伴う。mise だけを入れる場合は下記の個別手順を使う。
 
@@ -47,6 +47,67 @@ bash bin/install.sh
 変更を事前確認したい場合は `git fetch` と `git diff HEAD..origin/main` で確認する。
 Homebrew 未導入時の既存処理も配布アーカイブを取得・展開して実行するため、
 可能なら事前に公式手順で Homebrew を導入し、配布元を信頼できることを確認する。
+
+## Windows 11 / WSL2
+
+Windows 側に VS Code と WSL 拡張、WSL 側に開発ツールを導入する。
+日本語入力は Windows Terminal / Windows 版 VS Code の Windows 側 IME を使う。
+
+初回は Windows の管理者 PowerShell で WSL と Ubuntu を導入する（導入済みなら省略）。
+
+```powershell
+wsl --install -d Ubuntu
+```
+
+必要な再起動と Linux ユーザーの作成を済ませ、`wsl -l -v` で対象の VERSION が `2` であることを確認する。
+Windows の PowerShell で VS Code を導入し、PATH が反映された新しい PowerShell で WSL 拡張を追加する。
+既に導入済みなら該当する操作を省く。
+
+```powershell
+winget install --id Microsoft.VisualStudioCode --exact --source winget
+code --install-extension ms-vscode-remote.remote-wsl
+```
+
+WSL の Ubuntu / Debian ターミナルでは、Git が未導入の場合だけ次を実行する。
+続けて上記の clone と `bash bin/install.sh` を実行する。
+
+```bash
+sudo apt update
+sudo apt install -y git
+```
+
+リポジトリは `/mnt/c` ではなく WSL 側の `~/git` に置く。
+Windows 側と WSL 側の Node・npm・依存ディレクトリは共有せず、プロジェクトの依存導入も WSL 側で行う。
+
+| 一括セットアップの対象 | WSL での処理 |
+| --- | --- |
+| OS パッケージ | apt update / upgrade と screen・ca-certificates・curl・git・vim・python3-venv の導入 |
+| mise | 未導入なら extrepo と mise の配布元を追加し、apt で導入 |
+| Node.js / npm | mise で実行時点の Node LTS をグローバル設定 |
+| Firebase CLI | mise の Node で firebase-tools をグローバル導入 |
+| スキル用 Python | 専用 venv に PyYAML 6.0.3 を導入。導入済みなら再利用 |
+| 共通設定・スキル | 従来どおり既存ファイルをシンボリックリンクで置き換える |
+| Downloads | Windows の実際の Downloads フォルダへリンク。既存の実ディレクトリは維持 |
+| VS Code 設定 | Windows の `%APPDATA%\Code\User` に settings.json と keybindings.json を上書きコピー |
+| Flutter | `INSTALL_FLUTTER=1` の指定時だけ導入・更新 |
+
+Windows フォルダは PowerShell から取得し、Windows のユーザー名や Downloads の保存先を決め打ちしない。
+Windows 連携が無効・利用不可の場合やフォルダへアクセスできない場合は、該当の連携設定を省いたことを表示する。
+VS Code 設定は `u` のたびにコピーして反映する。対象は通常版の既定プロファイルで、Insiders・ポータブル版・別プロファイルは対象外。
+WSL 側の Linux 用 VS Code 設定と ChromeOS 用 `.sommelierrc` は配置しない。
+fcitx、Linux 版 VS Code、ChromeOS の MyDrive リンク、Linux アプリの最大化ランチャーも導入・設定しない。
+Chromium が存在する場合だけ `CHROME_EXECUTABLE` を設定する。通常の WSL セットアップでは Chromium を導入しない。
+ホームでの screen 自動起動と作業用タブは従来どおり維持する。
+
+VS Code 本体・WSL 拡張は上記の Windows 側の手順で準備する。
+Codex 本体・gh・gcloud・Docker・Android SDK は一括スクリプトでは導入しない。
+GitHub の SSH 鍵や credential helper、Firebase / gcloud のログイン情報は新環境で別途設定する。
+メモリ・CPU・swap の上限は Windows 側の WSL 設定または `%UserProfile%\.wslconfig` で調整する。一括スクリプトでは変更しない。
+
+参考: [WSL の開発環境](https://learn.microsoft.com/windows/wsl/setup/environment)、
+[VS Code と WSL](https://code.visualstudio.com/docs/remote/wsl)、
+[Windows の VS Code 設定保存先](https://code.visualstudio.com/docs/configure/settings#settings-json-file)、
+[WSL のリソース設定](https://learn.microsoft.com/windows/wsl/wsl-config)。
 
 ## Flutter（任意）
 
@@ -93,7 +154,7 @@ python3 ~/git/dotfiles/bin/setup-chatgpt-maximized.py
 `CODEX_HOME` を指定している場合はその保存先を使う。
 既に起動している場合は保存情報を変更せず、既存のアプリへ起動引数を渡す。
 `/usr/bin/chatgpt` を直接実行する場合は補正されない。
-`bin/install.sh` の Linux セットアップでも、アプリ導入済みの場合に適用する。
+`bin/install.sh` の WSL 以外の Linux セットアップでも、アプリ導入済みの場合に適用する。
 
 補正前の保存情報は、同じフォルダの
 `.codex-global-state.json.before-maximized-launcher` へ直前の一世代を退避する。
@@ -181,7 +242,7 @@ bash ~/git/dotfiles/bin/setup-skill-python.sh
 Mac は Homebrew、Chromebook / Debian・Ubuntu / WSL は extrepo と apt を使う。
 PATH 上または `~/.local/bin/mise` に導入済みなら追加インストールを省く。
 既存どおり OS のパッケージ更新や Node・Firebase の導入も行う。Flutter は明示指定した場合のみ導入・更新する。
-Linux 分岐には Chromebook 固有のリンク作成等もあるため、WSL ではその内容を確認する。
+WSL では Windows 用の連携処理を選び、Chromebook 固有のリンク作成や GUI ツールの導入を省く。
 Windows ネイティブは一括スクリプトの対象外で、下記の Git Bash 手順を使う。
 
 以下は mise だけを個別に導入する場合の手順。
