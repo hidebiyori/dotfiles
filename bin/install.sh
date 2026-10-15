@@ -4,11 +4,13 @@ GIT_ROOT="${HOME}/git"
 ORG_NAME=hidebiyori
 PJ_NAME=dotfiles
 PJ_ROOT="${GIT_ROOT}/${PJ_NAME}"
-PJ_URL="https://${GH_TOKEN}${GH_TOKEN:+@}github.com/${ORG_NAME}/${PJ_NAME}.git"
+PJ_URL="https://github.com/${ORG_NAME}/${PJ_NAME}.git"
 
 function setOptions()
 {
-  set -xeuo pipefail
+  # Do not trace credentials read from an existing Git configuration.
+  set +x
+  set -euo pipefail
 }
 
 function setDirectories()
@@ -23,6 +25,16 @@ function setGitRepository()
   local targetPath="${2:-${GIT_ROOT}/${repositoryName}}"
 
   if [ -d "${targetPath}" ]; then
+    local originUrl
+    originUrl="$(git -C "${targetPath}" config --get remote.origin.url || true)"
+    if [[ "${repositoryUrl}" == https://* && "${originUrl}" == https://* ]]; then
+      local originRepository="${originUrl%%[?#]*}"
+      originRepository="${originRepository#https://}"
+      originRepository="https://${originRepository##*@}"
+      if [[ "${originRepository}" == "${repositoryUrl}" && "${originUrl}" != "${repositoryUrl}" ]]; then
+        git -C "${targetPath}" remote set-url origin "${repositoryUrl}"
+      fi
+    fi
     git -C "${targetPath}" pull
   else
     git clone "${repositoryUrl}" "${targetPath}"
@@ -173,41 +185,48 @@ function setFirebase()
   # firebase projects:list
 }
 
-setOptions
-setDirectories
-setGitRepository "${PJ_URL}"
-setSymbolicLink "${PJ_ROOT}/src" "${HOME}"
+function main()
+{
+  setOptions
+  setDirectories
+  setGitRepository "${PJ_URL}"
+  setSymbolicLink "${PJ_ROOT}/src" "${HOME}"
 
-uname="$(uname -a)"
+  uname="$(uname -a)"
 
 
 ### Mac ###
-if [[ "${uname}" =~ "Darwin" ]]; then
-  setBrew
-  brew list --versions python >/dev/null 2>&1 || brew install python
-  setScreencapture
-  setMise
+  if [[ "${uname}" =~ "Darwin" ]]; then
+    setBrew
+    brew list --versions python >/dev/null 2>&1 || brew install python
+    setScreencapture
+    setMise
 
 
 ### Linux ###
-elif [[ "${uname}" =~ "Linux" ]]; then
-  setApt
-  sudo apt install -y python3-venv
-  setMise
-  setJapanese
-  setVisualStudioCode
-  setLink
-  python3 "${PJ_ROOT}/bin/setup-chatgpt-maximized.py"
+  elif [[ "${uname}" =~ "Linux" ]]; then
+    setApt
+    sudo apt install -y python3-venv
+    setMise
+    setJapanese
+    setVisualStudioCode
+    setLink
+    python3 "${PJ_ROOT}/bin/setup-chatgpt-maximized.py"
 
 
-fi
+  fi
 
 
 ### Common ###
-bash "${PJ_ROOT}/bin/setup-skill-python.sh"
-setNode
-if [[ "${INSTALL_FLUTTER:-0}" == "1" ]]; then
-  setFlutter
+  bash "${PJ_ROOT}/bin/setup-skill-python.sh"
+  setNode
+  if [[ "${INSTALL_FLUTTER:-0}" == "1" ]]; then
+    setFlutter
+  fi
+  setFirebase
+  echo "Success: ${0}"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
 fi
-setFirebase
-echo "Success: ${0}"
