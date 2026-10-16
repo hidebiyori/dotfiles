@@ -30,6 +30,12 @@ WSL でも Linux 用のデスクトップアプリは導入しない。
 `-UpgradeApps` を指定した場合だけ、管理対象 ID の `winget upgrade` も実行する。
 全アプリを対象とする `winget upgrade --all` は使わない。
 
+「導入済み」「更新不要」「新しいバージョンではない」という既知の終了コードは、
+同じ ID・source を指定した再確認で導入済みと判定できた場合だけ許容する。
+初回確認とインストールの間に他の処理が導入した場合も再実行を妨げない。
+判定には [WinGet 公式の HRESULT 定義](https://github.com/microsoft/winget-cli/blob/master/src/AppInstallerSharedLib/Public/AppInstallerErrors.h)を使い、
+通信エラーやハッシュ不一致等を一律に無視することはしない。
+
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\install-windows.ps1" -AppsOnly
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\install-windows.ps1" -AppsOnly -UpgradeApps
@@ -104,4 +110,6 @@ WSL 拡張以外の Prettier 等は必要なプロジェクトに合わせて追
 スクリプトはアプリを起動・終了するためのものではない。
 導入元のインストーラーが要求する承認や、利用者による必要な再起動は残る。
 テストでは外部コマンドをスタブ化し、既存の導入を維持する分岐、対象限定の更新、
-エラー時の停止を確認する。実アプリの新規導入や UI 動作は実機での確認が必要。
+連続実行、更新不要、途中の失敗からの再開と本当のエラー時の停止を確認する。
+共通設定や更新の範囲は [README の再実行方針](../README.md#再実行時の動作)も参照。
+実アプリの新規導入や UI 動作は実機での確認が必要。

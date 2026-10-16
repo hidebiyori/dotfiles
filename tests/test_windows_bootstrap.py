@@ -80,6 +80,15 @@ fi
         self.assertIn("installer", calls)
         self.assertNotIn("clone ", calls)
 
+    def test_first_clone_followed_by_repeated_bootstraps_reuses_the_checkout(self):
+        for _ in range(3):
+            result = self.run_bootstrap()
+            self.assertEqual(result.returncode, 0, result.stderr)
+        calls = self.log.read_text().splitlines()
+        self.assertEqual(sum("git clone " in call for call in calls), 1)
+        self.assertEqual(sum("pull --ff-only origin main" in call for call in calls), 2)
+        self.assertEqual(calls.count("installer"), 3)
+
     def test_existing_non_repository_is_preserved(self):
         repository = self.home / "git/dotfiles"
         repository.mkdir(parents=True)

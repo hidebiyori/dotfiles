@@ -42,7 +42,7 @@ function setGitRepository()
         git -C "${targetPath}" remote set-url origin "${repositoryUrl}"
       fi
     fi
-    git -C "${targetPath}" pull
+    git -C "${targetPath}" pull --ff-only
   else
     git clone "${repositoryUrl}" "${targetPath}"
   fi
@@ -64,6 +64,12 @@ function setSymbolicLink()
       continue
     fi
 
+    # A manually linked directory already exposes the source tree. Recursing
+    # into it would replace source files with links to themselves.
+    if [[ "${srcPath}" -ef "${dstPath}" ]]; then
+      continue
+    fi
+
     if [ -d "${srcPath}" ]; then
       mkdir -p "${dstPath}"
       setSymbolicLink "${srcPath}" "${dstPath}"
@@ -73,9 +79,47 @@ function setSymbolicLink()
   done
 }
 
+function setDirectoryLink()
+{
+  local target="${1:?}" destination="${2:?}"
+  if [[ -L "${destination}" ]]; then
+    if [[ "$(readlink "${destination}")" == "${target}" || "${target}" -ef "${destination}" ]]; then
+      return
+    fi
+  elif [[ -e "${destination}" ]]; then
+    echo "${destination}: 既存のディレクトリまたはファイルのため維持します。" >&2
+    return
+  fi
+  ln -sfnv "${target}" "${destination}"
+}
+
+function copyFileIfChanged()
+{
+  local source="${1:?}" destination="${2:?}"
+  if [[ "${source}" -ef "${destination}" ]] || cmp -s "${source}" "${destination}"; then
+    return
+  fi
+  if [[ -d "${destination}" ]]; then
+    echo "${destination}: ファイルのコピー先にディレクトリがあるため停止します。" >&2
+    return 1
+  fi
+  cp "${source}" "${destination}"
+}
+
 function setBrew()
 {
-  if which brew; then
+  # A previous child process may have installed brew without changing the
+  # caller's PATH. Reuse that installation on the next invocation.
+  local brewPath
+  if ! command -v brew >/dev/null 2>&1; then
+    for brewPath in "${HOME}/.config/brew/bin" /opt/homebrew/bin /usr/local/bin; do
+      if [[ -x "${brewPath}/brew" ]]; then
+        export PATH="${brewPath}:${PATH}"
+        break
+      fi
+    done
+  fi
+  if command -v brew >/dev/null 2>&1; then
     brew update
     brew upgrade
   else
@@ -87,7 +131,9 @@ function setBrew()
     export PATH="${targetPath}/bin:${PATH}"
     brew install bash-completion git jq pstree
     brew install --cask google-japanese-ime
-    brew doctor
+    if ! brew doctor; then
+      echo "Homebrew の導入は完了しました。brew doctor の案内を確認してください。" >&2
+    fi
   fi
 }
 
@@ -304,8 +350,8 @@ function setLink()
   local drivePath="/mnt/chromeos/GoogleDrive/MyDrive"
 
   # required: Chrome OS Share with Linux
-  ln -sfnv "${localPath}/Downloads" "${HOME}/"
-  ln -sfnv "${drivePath}" "${HOME}/"
+  setDirectoryLink "${localPath}/Downloads" "${HOME}/Downloads"
+  setDirectoryLink "${drivePath}" "${HOME}/MyDrive"
 }
 
 function setWslIntegration()
@@ -334,11 +380,7 @@ function setWslIntegration()
 
   local windowsAppData windowsDownloads
   if windowsDownloads="$(wslpath -u "${windowsFolders#*$'\n'}")" && [[ -d "${windowsDownloads}" ]]; then
-    if [[ -d "${HOME}/Downloads" && ! -L "${HOME}/Downloads" ]]; then
-      echo "WSL: ~/Downloads は既存のディレクトリのため維持します。" >&2
-    else
-      ln -sfnv "${windowsDownloads}" "${HOME}/Downloads"
-    fi
+    setDirectoryLink "${windowsDownloads}" "${HOME}/Downloads"
   else
     echo "WSL: Windows の Downloads にアクセスできないためリンク作成を省きます。" >&2
   fi
@@ -346,8 +388,8 @@ function setWslIntegration()
   if windowsAppData="$(wslpath -u "${windowsFolders%%$'\n'*}")" && [[ -d "${windowsAppData}" ]]; then
     local codeUser="${windowsAppData}/Code/User"
     mkdir -p "${codeUser}"
-    cp "${PJ_ROOT}/src/.config/Code/User/settings.json" "${codeUser}/settings.json"
-    cp "${PJ_ROOT}/src/.config/Code/User/keybindings.json" "${codeUser}/keybindings.json"
+    copyFileIfChanged "${PJ_ROOT}/src/.config/Code/User/settings.json" "${codeUser}/settings.json"
+    copyFileIfChanged "${PJ_ROOT}/src/.config/Code/User/keybindings.json" "${codeUser}/keybindings.json"
     echo "WSL: Windows 版 VS Code の既定プロファイル設定を反映しました。"
   else
     echo "WSL: Windows の AppData にアクセスできないため VS Code 設定の反映を省きます。" >&2

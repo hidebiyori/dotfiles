@@ -96,7 +96,7 @@ Test-Case 'WinGet query errors do not cause an install' {
     Assert-True ($script:Calls.Count -eq 1) 'Query failure must stop immediately.'
 }
 
-Test-Case 'Explicit upgrades accept only the no-update HRESULT' {
+Test-Case 'Explicit upgrades confirm installed packages after the no-update HRESULT' {
     Set-Mock 'Invoke-WingetNative' {
         param([string[]]$CommandArguments)
         $script:Calls.Add(($CommandArguments -join ' '))
@@ -105,6 +105,62 @@ Test-Case 'Explicit upgrades accept only the no-update HRESULT' {
     }
     Install-WindowsApps -Upgrade
     Assert-True (@($script:Calls | Where-Object { $_.StartsWith('upgrade --id ') }).Count -eq 3) 'Expected three targeted upgrades.'
+    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('list --id ') }).Count -eq 6) 'Expected exact installation checks before and after no-update results.'
+}
+
+Test-Case 'All known no-change results require a confirmed installation' {
+    foreach ($result in @(2316632107L, 2316632143L, 2316632161L)) {
+        $script:NoChangeResult = $result
+        $script:Queries = @{}
+        Set-Mock 'Invoke-WingetNative' {
+            param([string[]]$CommandArguments)
+            $id = $CommandArguments[2]
+            $script:Calls.Add(($CommandArguments -join ' '))
+            if ($CommandArguments[0] -eq 'list') {
+                if (-not $script:Queries.ContainsKey($id)) {
+                    $script:Queries[$id] = 1
+                    return 2316632084L
+                }
+                return 0
+            }
+            return $script:NoChangeResult
+        }
+        Install-WindowsApps
+    }
+    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('install --id ') }).Count -eq 9) 'Expected install attempts for initially missing packages.'
+    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('list --id ') }).Count -eq 18) 'Every no-change result must be verified.'
+}
+
+Test-Case 'A no-change result with missing or unreadable installation remains an error' {
+    foreach ($queryResult in @(2316632084L, 5)) {
+        $script:QueryResult = $queryResult
+        foreach ($result in @(2316632107L, 2316632143L, 2316632161L)) {
+            $script:NoChangeResult = $result
+            $script:QueryCount = 0
+            Set-Mock 'Invoke-WingetNative' {
+                param([string[]]$CommandArguments)
+                if ($CommandArguments[0] -eq 'list') {
+                    $script:QueryCount++
+                    if ($script:QueryCount -eq 1) { return 2316632084L }
+                    return $script:QueryResult
+                }
+                return $script:NoChangeResult
+            }
+            Assert-Throws { Install-WindowsApps } '*installation could not be confirmed*'
+        }
+    }
+}
+
+Test-Case 'Unknown versions and download integrity failures are not hidden by installed packages' {
+    foreach ($result in @(2316632144L, 2316632081L)) {
+        $script:FailureResult = $result
+        Set-Mock 'Invoke-WingetNative' {
+            param([string[]]$CommandArguments)
+            if ($CommandArguments[0] -eq 'list') { return 0 }
+            return $script:FailureResult
+        }
+        Assert-Throws { Install-WindowsApps -Upgrade } '*upgrade failed*'
+    }
 }
 
 Test-Case 'Installer failures stop later app installations' {
@@ -116,6 +172,89 @@ Test-Case 'Installer failures stop later app installations' {
     }
     Assert-Throws { Install-WindowsApps } '*install failed*'
     Assert-True ($script:Calls.Count -eq 2) 'Failed installation must stop the batch.'
+}
+
+Test-Case 'Retry after a partial failure installs only the remaining packages' {
+    $script:Installed = @{}
+    $script:FailOnce = $true
+    Set-Mock 'Invoke-WingetNative' {
+        param([string[]]$CommandArguments)
+        $id = $CommandArguments[2]
+        $script:Calls.Add(($CommandArguments -join ' '))
+        if ($CommandArguments[0] -eq 'list') {
+            if ($script:Installed.ContainsKey($id)) { return 0 }
+            return 2316632084L
+        }
+        if ($id -eq 'Google.Chrome' -and $script:FailOnce) {
+            $script:FailOnce = $false
+            return 1603
+        }
+        $script:Installed[$id] = $true
+        return 0
+    }
+    Assert-Throws { Install-WindowsApps } '*install failed for Google.Chrome*'
+    Assert-True ($script:Installed.Count -eq 1) 'Only the first app should have been installed.'
+    Install-WindowsApps
+    Install-WindowsApps
+    Assert-True ($script:Installed.Count -eq 3) 'All managed packages should be present after retry.'
+    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('install --id 9PLM9XGG6VKS ') }).Count -eq 1) 'The completed installation was repeated.'
+    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('install --id Microsoft.VisualStudioCode ') }).Count -eq 1) 'VS Code should install only after recovery.'
+}
+
+Test-Case 'Full setup resumes WSL preparation and can be repeated after completion' {
+    $script:Installed = @{}
+    $script:ExtensionInstalled = $false
+    $script:WslInstalled = $false
+    $script:LinuxUserReady = $false
+    Set-Mock 'Assert-WindowsHost' { param([switch]$OnlyApps) }
+    Set-Mock 'Invoke-WingetNative' {
+        param([string[]]$CommandArguments)
+        $id = $CommandArguments[2]
+        $script:Calls.Add(($CommandArguments -join ' '))
+        if ($CommandArguments[0] -eq 'list') {
+            if ($script:Installed.ContainsKey($id)) { return 0 }
+            return 2316632084L
+        }
+        if ($CommandArguments[0] -eq 'upgrade') { return 2316632107L }
+        $script:Installed[$id] = $true
+        return 0
+    }
+    Set-Mock 'Find-WindowsCode' { 'synthetic-code' }
+    Set-Mock 'synthetic-code' {
+        $global:LASTEXITCODE = 0
+        if ($args[0] -eq '--list-extensions') {
+            if ($script:ExtensionInstalled) { 'ms-vscode-remote.remote-wsl' }
+        } else {
+            $script:ExtensionInstalled = $true
+            $script:Calls.Add('install-extension')
+        }
+    }
+    Set-Mock 'Get-WslDistribution' {
+        param([string]$Name)
+        if ($script:WslInstalled) { [pscustomobject]@{ Name = $Name; Version = 2 } }
+    }
+    Set-Mock 'Install-WslDistribution' {
+        param([string]$Name)
+        $script:WslInstalled = $true
+        $script:Calls.Add('install-wsl')
+    }
+    Set-Mock 'Invoke-WslCapture' {
+        param([string[]]$CommandArguments)
+        if ($script:LinuxUserReady) { return '1000' }
+        return '0'
+    }
+    Set-Mock 'Install-WslDotfiles' { param([string]$Name) $script:Calls.Add('linux-setup') }
+    Assert-True (-not (Invoke-WindowsSetup -Name Ubuntu)) 'The first run should wait for WSL preparation.'
+    Assert-True (-not (Invoke-WindowsSetup -Name Ubuntu)) 'The next run should wait for a regular Linux user.'
+    $script:LinuxUserReady = $true
+    foreach ($iteration in 1..3) {
+        Assert-True (Invoke-WindowsSetup -Name Ubuntu) 'A ready setup should support consecutive reruns.'
+    }
+    Assert-True (Invoke-WindowsSetup -Name Ubuntu -Upgrade) 'Up-to-date packages should not fail the full setup.'
+    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('install --id ') }).Count -eq 3) 'Desktop packages should be installed once each.'
+    Assert-True (@($script:Calls | Where-Object { $_ -eq 'install-extension' }).Count -eq 1) 'The extension was reinstalled.'
+    Assert-True (@($script:Calls | Where-Object { $_ -eq 'install-wsl' }).Count -eq 1) 'The WSL distribution was reinstalled.'
+    Assert-True (@($script:Calls | Where-Object { $_ -eq 'linux-setup' }).Count -eq 4) 'Each ready run should reapply Linux settings.'
 }
 
 Test-Case 'AppsOnly does not touch WSL' {
