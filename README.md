@@ -102,6 +102,39 @@ WSL 側の開発リポジトリと依存ディレクトリは `/mnt/c` へ置か
 Windows / WSL の Node・npm・認証情報は別々に扱う。
 Windows 側の再適用は PowerShell スクリプト、WSL 側の更新・再適用は従来どおり `u`。
 
+Codex の実行環境はスクリプトでは切り替えない。導入後にアプリの **Settings → Agent environment → WSL** を選び、
+統合ターミナルも **Integrated terminal shell → WSL** に設定してアプリを再起動する。
+詳細は [Codex を WSL で使う設定](docs/windows-setup.md#codex-を-wsl-で使う設定)を参照。
+
+## GitHub CLI の初回認証
+
+GitHub CLI（`gh`）は全対応環境のセットアップで導入する。
+Mac は Homebrew、Chromebook / Debian・Ubuntu / WSL は apt、Windows は winget の `GitHub.cli` を使う。
+Windows の `-AppsOnly` でも導入し、`-UpgradeApps` の明示更新対象にも含める。
+認証は利用者が初回に行う。Codex がコマンドを実行する環境のターミナルで実行する。
+WSL を使う場合は WSL 内で行い、Windows 側の認証とは別に確認する。
+
+```bash
+gh --version
+gh auth login --hostname github.com --git-protocol https --web
+gh auth setup-git
+gh auth status
+```
+
+表示された URL をブラウザーで開き、案内に従って自分の GitHub アカウントで認証する。
+`gh auth setup-git` は HTTPS の Git 認証に `gh` を使う設定。
+SSH の remote を使う場合は別途 SSH 認証が必要。認証済みなら再ログインは不要。
+[GitHub CLI の認証コマンド](https://cli.github.com/manual/gh_auth_login)も参照。
+
+PR 作成には対象リポジトリ（または fork）への push 権限と、コミット用の名前・メールも必要。
+対象のリポジトリ内で確認し、未設定の項目は自分の情報で設定する。
+
+```bash
+git config --get user.name
+git config --get user.email
+git remote -v
+```
+
 ## Flutter（任意）
 
 通常の `bin/install.sh` / `u` では Flutter の導入・更新・precache・doctor を実行しない。

@@ -36,7 +36,7 @@ WSL 内の一括セットアップ中は VS Code を閉じておく。
 
 | 段階 | 処理 | 利用者が行うこと |
 | --- | --- | --- |
-| Windows アプリ | Codex / ChatGPT・Chrome・VS Code の不足分を winget で導入し、WSL 拡張を追加 | 必要なインストーラーの承認 |
+| Windows アプリ | Codex / ChatGPT・Chrome・VS Code・GitHub CLI の不足分を winget で導入し、WSL 拡張を追加 | 必要なインストーラーの承認 |
 | WSL が未導入 | 選択したディストリビューションを `wsl --install` で導入し、いったん終了 | WSL 導入時の管理者承認。指示があれば Windows を再起動 |
 | Linux の初期設定 | root が既定ユーザーの場合は、一般ユーザーの設定を案内して終了 | スタートメニューから Ubuntu を起動し、Linux ユーザー名・パスワードを作成。シェルを `exit` で終了 |
 | WSL が使用可能 | 一般ユーザーで Git の準備、`~/git/dotfiles` の clone / 更新、`bash bin/install.sh` | `sudo` のパスワードや apt の確認への応答 |
@@ -68,7 +68,7 @@ Windows アプリだけの導入・再適用:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\install-windows.ps1" -AppsOnly
 ```
 
-管理対象の3アプリの更新も明示的に行う:
+管理対象のデスクトップ3アプリと GitHub CLI の更新も明示的に行う:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\install-windows.ps1" -AppsOnly -UpgradeApps
@@ -81,7 +81,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\instal
 
 ## 同じコマンドを再実行した場合
 
-- 導入済みの3アプリと WSL 拡張は再インストールしない。
+- 導入済みのデスクトップ3アプリ・GitHub CLI と WSL 拡張は再インストールしない。
 - 指定名の WSL2 があれば再利用し、ディストリビューションや Linux ユーザーを作り直さない。
 - 準備済みの WSL では、既存の clone を更新して共通設定を再適用する。
   同じ設定リンク・Downloads リンクは再利用し、VS Code の設定は内容が変わった場合だけコピーする。
@@ -111,7 +111,7 @@ Windows 側の `%USERPROFILE%\install-windows.ps1` は入口となる単独フ�
 ## WSL 内で導入するもの
 
 `bin/install.sh` が共通設定・スキル、apt パッケージ、mise、Node LTS / npm、
-Firebase CLI、スキル用 Python を準備する。Flutter は従来どおり明示指定時だけ。
+GitHub CLI（`gh`）、Firebase CLI、スキル用 Python を準備する。Flutter は従来どおり明示指定時だけ。
 Windows の実際の Downloads へのリンクと、通常版 VS Code の既定プロファイルへの設定コピーも行う。
 Downloads の既存の実ディレクトリは維持し、Windows 連携が使えない場合は省略を表示する。
 
@@ -130,7 +130,7 @@ wsl --list --verbose
 WSL のターミナルを新しく開いて確認する。
 
 ```bash
-command -v git mise node npm firebase
+command -v git gh mise node npm firebase
 mise doctor
 node --version
 npm --version
@@ -143,15 +143,55 @@ WSL の開発リポジトリと依存ディレクトリは `~/git` 以下に置�
 VS Code は WSL のプロジェクト内で `code .` を実行し、左下に `WSL: Ubuntu` 等が表示されることを確認する。
 初回の VS Code Server のダウンロードは別途発生する。
 
+### Codex を WSL で使う設定
+
 Codex は ChatGPT デスクトップアプリ内から使う。
-Windows アプリの既定エージェントは Windows ネイティブなので、WSL 内で開発する場合は
-アプリの設定でエージェントを WSL に切り替える。統合ターミナルも別途 WSL を選ぶ。
-設定反映に必要なアプリの再起動は、進行中の作業を終えてから利用者が行う。
-Windows と WSL の Codex の保存先・認証情報は自動共有しない。
+Windows アプリの既定エージェントは Windows ネイティブで、スクリプトはこの設定を切り替えない。
+WSL 内で開発する場合は、導入後に次を一度設定する。
+
+1. アプリの **Settings → Agent environment** を **WSL（Windows Subsystem for Linux）** に変更する。
+2. **Integrated terminal shell** も **WSL** に変更する。エージェントの実行環境とは独立した設定。
+3. 進行中の作業を終えて、アプリを再起動する。エージェントの切り替えは再起動後に反映される。
+4. **Add new project** または `Ctrl+O` でフォルダー選択を開き、`\\wsl$\` から
+   使用するディストリビューションの `home/<Linuxユーザー名>/git/<リポジトリ名>` を選ぶ。
+
+新しいチャットで `pwd` を実行して Linux 側のプロジェクトを指すことと、
+`uname -s` が `Linux` を返すことを確認する。
+統合ターミナルの設定確認は、新しいターミナルを開いて行う。
+
+Windows アプリの Codex 保存先は `%USERPROFILE%\.codex`。
+WSL 内で別途 Codex CLI を使う場合の既定保存先は `~/.codex` で、設定・認証・履歴は自動共有しない。
 [公式の Windows / WSL 設定](https://learn.chatgpt.com/docs/windows/windows-app#windows-subsystem-for-linux-wsl)を参照。
 
+### GitHub の PR を WSL から作成する準備
+
+GitHub CLI（`gh`）は Windows 側に winget、WSL 側に apt で導入する。
+初回認証は自動では行わない。Codex を WSL で動かす場合は WSL のターミナルで、
+[共通の GitHub CLI 初回認証手順](../README.md#github-cli-の初回認証)を実行する。
+Windows と WSL の認証は別々なので、使用する環境の `gh auth status` で確認する。
+Windows 側で新規導入した `gh` が見つからなければ、PowerShell / アプリを開き直す。
+
+#### WSL から認証用ブラウザーを開く
+
+WSL 内に `xdg-open` や `wslview` がない場合、`gh auth login --web` のブラウザー自動起動は失敗する。
+この dotfiles は `~/bin/wsl-browser` を配置し、WSL の Bash で `BROWSER` が未設定ならそのパスを設定する。
+Windows の `powershell.exe` 経由で Windows の既定ブラウザーを開くため、Linux 用ブラウザーは不要。
+`GH_BROWSER` を別途設定している場合は、そちらが優先される。
+
+設定反映後は WSL のターミナルを開き直す。現在のターミナルだけに反映する場合:
+
+```bash
+export BROWSER="$HOME/bin/wsl-browser"
+gh auth login --hostname github.com --git-protocol https --web
+```
+
+`command -v powershell.exe` が見つからない場合は WSL の Windows 実行ファイル連携と PATH を確認する。
+自動起動できない場合も、表示された URL を Windows のブラウザーで開いてコードを入力すれば認証できる。
+
+### その他の個別設定
+
 サインイン、GitHub の push 認証、プロジェクトの取得・依存導入は個別に行う。
-Windows ネイティブの Git・Node、gh・gcloud・Docker・Android SDK は、この3アプリの一覧に含めていない。
+Windows ネイティブの Git・Node、gcloud・Docker・Android SDK は、このセットアップでは導入しない。
 WSL 内の clone に Git for Windows は不要だが、Windows 版 Codex の一部の Git 機能は
 ネイティブの Git も必要とする。必要な場合は通常の PowerShell で
 `winget install --id Git.Git --exact --source winget` を別途実行する。

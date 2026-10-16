@@ -47,6 +47,20 @@ class InstallerTests(unittest.TestCase):
             check=True,
         )
 
+    def test_wsl_browser_passes_url_as_data_and_propagates_failure(self):
+        self.command("powershell.exe", 'cat > "$TEST_LOG"; exit "${TEST_BROWSER_EXIT:-0}"\n')
+        url = "https://example.com/login?q=a&next=b#fragment"
+        script = ROOT / "src/bin/wsl-browser"
+        result = subprocess.run([str(script), url], env=self.env, capture_output=True)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(self.log.read_text(), url)
+        result = subprocess.run([str(script), url], env={**self.env, "TEST_BROWSER_EXIT": "7"},
+                                capture_output=True)
+        self.assertEqual(result.returncode, 7)
+        result = subprocess.run([str(script), "file:///tmp/example"], env=self.env,
+                                capture_output=True)
+        self.assertEqual(result.returncode, 2)
+
     def git_stub(self):
         self.command("git", '''printf '%s\\n' "$*" >> "$TEST_LOG"
 if [[ "$*" == *"config --get remote.origin.url" ]]; then
@@ -201,7 +215,7 @@ esac
         self.run_bash("main")
         self.assert_common_tools()
         calls = self.log.read_text()
-        self.assertIn("sudo apt install screen ca-certificates curl git vim", calls)
+        self.assertIn("sudo apt install screen ca-certificates curl gh git vim", calls)
         self.assertNotIn("fcitx", calls)
         self.assertNotIn("vscode.deb", calls)
         self.assertNotIn("linux-launcher", calls)
@@ -327,7 +341,7 @@ main
 ''')
         self.assert_common_tools()
         calls = self.log.read_text()
-        for expected in ("sudo apt install screen ca-certificates curl\n", "japanese", "linux-code",
+        for expected in ("sudo apt install screen ca-certificates curl gh\n", "japanese", "linux-code",
                          "codex-desktop", "linux-launcher"):
             self.assertIn(expected, calls)
         self.assertEqual(os.readlink(self.home / "Downloads"), "/mnt/chromeos/MyFiles/Downloads")
@@ -341,7 +355,7 @@ main
 main
 ''')
         calls = self.log.read_text()
-        for expected in ("brew update", "brew upgrade", "defaults write com.apple.screencapture", "skill-python",
+        for expected in ("brew update", "brew upgrade", "brew list --versions gh", "defaults write com.apple.screencapture", "skill-python",
                          "mise use --global node@lts", "mise exec node@lts -- npm install -g firebase-tools"):
             self.assertIn(expected, calls)
         self.assertNotIn("sudo", calls)

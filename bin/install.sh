@@ -271,7 +271,7 @@ function setApt()
 {
   sudo apt update
   sudo apt upgrade
-  local packages=(screen ca-certificates curl)
+  local packages=(screen ca-certificates curl gh)
   if isWsl; then
     packages+=(git vim)
   fi
@@ -435,6 +435,7 @@ function main()
   ### Mac ###
   if [[ "${uname}" =~ "Darwin" ]]; then
     setBrew
+    brew list --versions gh >/dev/null 2>&1 || brew install gh
     setMacDesktopApps
     brew list --versions python >/dev/null 2>&1 || brew install python
     setScreencapture

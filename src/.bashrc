@@ -99,6 +99,12 @@ if [[ "${uname}" =~ "Darwin" ]]; then
 elif [[ "${uname}" =~ "Linux" ]]; then
   alias ls="ls --color"
 
+  if [[ -n "${WSL_DISTRO_NAME:-}" || -n "${WSL_INTEROP:-}" || "${uname}" == *[Mm]icrosoft* ]]; then
+    if [[ -z "${BROWSER:-}" && -x "${HOME}/bin/wsl-browser" ]] && command -v powershell.exe >/dev/null 2>&1; then
+      export BROWSER="${HOME}/bin/wsl-browser"
+    fi
+  fi
+
   if [ -x /usr/bin/chromium ]; then
     export CHROME_EXECUTABLE=/usr/bin/chromium
   fi
