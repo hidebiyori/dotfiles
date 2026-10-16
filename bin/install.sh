@@ -86,9 +86,93 @@ function setBrew()
     curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "${targetPath}"
     export PATH="${targetPath}/bin:${PATH}"
     brew install bash-completion git jq pstree
-    brew install --cask google-chrome google-japanese-ime visual-studio-code
+    brew install --cask google-japanese-ime
     brew doctor
   fi
+}
+
+function setMacDesktopApps()
+{
+  local cask appPath
+  local casks=(chatgpt google-chrome visual-studio-code)
+  for cask in "${casks[@]}"; do
+    if brew list --cask --versions "${cask}" >/dev/null 2>&1; then
+      if [[ "${UPGRADE_DESKTOP_APPS:-0}" == "1" ]]; then
+        brew upgrade --cask --greedy "${cask}"
+      fi
+      continue
+    fi
+    case "${cask}" in
+      chatgpt) appPath="ChatGPT.app" ;;
+      google-chrome) appPath="Google Chrome.app" ;;
+      visual-studio-code) appPath="Visual Studio Code.app" ;;
+    esac
+    if [[ -d "/Applications/${appPath}" || -d "${HOME}/Applications/${appPath}" ]]; then
+      echo "${appPath}: 既存のアプリを維持します。Homebrew 管理への変更は手動で行ってください。"
+      continue
+    fi
+    brew install --cask "${cask}"
+  done
+}
+
+function installDesktopDeb()
+{
+  local package="${1:?}"
+  local architecture="${2:?}"
+  local packageUrl="${3:?}"
+  local cacheRoot="${XDG_CACHE_HOME:-${HOME}/.cache}/dotfiles"
+  local cachedDeb="${cacheRoot}/${package}_${architecture}.deb"
+  local downloadedDeb="${cachedDeb}.part"
+  mkdir -p "${cacheRoot}" || return
+  if [[ ! -f "${cachedDeb}" ]]; then
+    curl --fail --location --proto '=https' --tlsv1.2 --output "${downloadedDeb}" "${packageUrl}" || return
+    if [[ "$(dpkg-deb --field "${downloadedDeb}" Package)" != "${package}" ||
+          "$(dpkg-deb --field "${downloadedDeb}" Architecture)" != "${architecture}" ]]; then
+      echo "${package}: 取得したパッケージの名前またはアーキテクチャが異なります。導入を中止します。" >&2
+      return 1
+    fi
+    mv "${downloadedDeb}" "${cachedDeb}" || return
+  fi
+  if [[ "$(dpkg-deb --field "${cachedDeb}" Package)" != "${package}" ||
+        "$(dpkg-deb --field "${cachedDeb}" Architecture)" != "${architecture}" ]]; then
+    echo "${package}: キャッシュのパッケージ情報が一致しません。内容を確認してください。" >&2
+    return 1
+  fi
+  sudo apt install "${cachedDeb}"
+}
+
+function getDesktopLinuxRelease()
+{
+  (. /etc/os-release; printf '%s:%s' "${ID}" "${VERSION_ID}")
+}
+
+function setCodexDesktop()
+{
+  local packageStatus queryExit=0
+  packageStatus="$(dpkg-query -W -f='${Status}' chatgpt 2>/dev/null)" || queryExit=$?
+  if (( queryExit > 1 )); then
+    echo "Codex / ChatGPT: パッケージの導入状態を確認できません。導入を中止します。" >&2
+    return 1
+  fi
+  if [[ "${packageStatus}" == 'install ok installed' ]]; then
+    return
+  fi
+  local osVersion architecture
+  osVersion="$(getDesktopLinuxRelease)"
+  case "${osVersion}" in
+    debian:13|ubuntu:24.04|ubuntu:26.04) ;;
+    *)
+      echo "Codex / ChatGPT: 新規導入は公式対象の Debian 13 / Ubuntu 24.04・26.04 に限ります。README.md を参照してください。" >&2
+      return 1
+      ;;
+  esac
+  architecture="$(dpkg --print-architecture)"
+  case "${architecture}" in
+    amd64|arm64) ;;
+    *) echo "Codex / ChatGPT: 対応パッケージのないアーキテクチャです。" >&2; return 1 ;;
+  esac
+  installDesktopDeb chatgpt "${architecture}" \
+    "https://persistent.oaistatic.com/codex-app-prod/linux/deb/latest/chatgpt_${architecture}.deb"
 }
 
 function setMise()
@@ -128,9 +212,9 @@ function setApt()
 {
   sudo apt update
   sudo apt upgrade
-  local packages=(screen)
+  local packages=(screen ca-certificates curl)
   if isWsl; then
-    packages+=(ca-certificates curl git vim)
+    packages+=(git vim)
   fi
   sudo apt install "${packages[@]}"
 }
@@ -153,13 +237,17 @@ function setJapanese()
 
 function setVisualStudioCode()
 {
-  if which code; then
-    :
-  else
-    curl -L "https://go.microsoft.com/fwlink/?LinkID=760868" -o vscode.deb
-    sudo apt install ./vscode.deb
-    rm vscode.deb
+  if command -v code >/dev/null 2>&1; then
+    return
   fi
+  local architecture platform
+  architecture="$(dpkg --print-architecture)"
+  case "${architecture}" in
+    amd64) platform=x64 ;;
+    arm64) platform=arm64 ;;
+    *) echo "VS Code: 対応パッケージのないアーキテクチャです。" >&2; return 1 ;;
+  esac
+  installDesktopDeb code "${architecture}" "https://update.code.visualstudio.com/latest/linux-deb-${platform}/stable"
 }
 
 function setLink()
@@ -257,6 +345,7 @@ function main()
   ### Mac ###
   if [[ "${uname}" =~ "Darwin" ]]; then
     setBrew
+    setMacDesktopApps
     brew list --versions python >/dev/null 2>&1 || brew install python
     setScreencapture
     setMise
@@ -272,6 +361,7 @@ function main()
     else
       setJapanese
       setVisualStudioCode
+      setCodexDesktop
       setLink
       python3 "${PJ_ROOT}/bin/setup-chatgpt-maximized.py"
     fi

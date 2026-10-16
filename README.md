@@ -4,7 +4,7 @@ hidebiyori の複数端末で、シェル等の共通設定と開発ツールを
 
 - `src/`: Bash・Vim・Git・Codex 等の設定ファイル。ホームディレクトリへシンボリックリンクで配置する。
 - `bin/install.sh`: このリポジトリの取得・更新、設定のリンク、OS 別のセットアップ、
-  mise・Node（mise）・Firebase 等の導入をまとめて行う。Flutter は任意。
+  デスクトップアプリ・mise・Node（mise）・Firebase 等の導入をまとめて行う。Flutter は任意。
 - `bin/install-windows.ps1`: Windows アプリの導入と WSL の準備、WSL 内の Git 取得・一括セットアップへの入口。
 - 一括セットアップ対象は Mac、Chromebook の Linux 開発環境、Windows 11 の WSL2（Debian / Ubuntu）。
   Linux 分岐は apt を使用し、WSL では ChromeOS 専用処理を省く。
@@ -48,6 +48,22 @@ bash bin/install.sh
 変更を事前確認したい場合は `git fetch` と `git diff HEAD..origin/main` で確認する。
 Homebrew 未導入時の既存処理も配布アーカイブを取得・展開して実行するため、
 可能なら事前に公式手順で Homebrew を導入し、配布元を信頼できることを確認する。
+
+## デスクトップアプリ
+
+管理対象は Codex / ChatGPT デスクトップ版、Chrome、VS Code。
+CLI の `codex` はこの一覧には含めない。
+
+| 環境 | 入口 | アプリの導入元 |
+| --- | --- | --- |
+| Mac | `bin/install.sh` | Homebrew cask |
+| Chromebook | `bin/install.sh` | Codex / ChatGPT と VS Code は公式 deb、Chrome は ChromeOS 標準版 |
+| Windows | `bin/install-windows.ps1` | winget / Microsoft Store |
+| WSL | Windows 側で準備後に `bin/install.sh` | Windows アプリを利用し、Linux GUI アプリは重複導入しない |
+
+不足分を導入し、導入済みアプリの入れ直しを省く。手動導入した Mac アプリも維持する。
+Linux の更新は既存の apt 処理を使い、Mac / Windows の対象アプリだけを明示更新する方法も用意している。
+配布名・管理対象の変更箇所・更新方法は[アプリ管理の手順](docs/desktop-apps.md)を参照する。
 
 ## Windows 11 / WSL2
 

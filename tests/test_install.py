@@ -26,7 +26,8 @@ class InstallerTests(unittest.TestCase):
             "PATH": str(self.bin) + os.pathsep + os.environ["PATH"],
             "TEST_LOG": str(self.log),
         }
-        for name in ("WSL_DISTRO_NAME", "WSL_INTEROP", "INSTALL_FLUTTER", "BASH_ENV"):
+        for name in ("WSL_DISTRO_NAME", "WSL_INTEROP", "INSTALL_FLUTTER", "BASH_ENV",
+                     "UPGRADE_DESKTOP_APPS", "XDG_CACHE_HOME"):
             self.env.pop(name, None)
 
     def command(self, name, contents):
@@ -165,6 +166,7 @@ esac
         self.assertNotIn("fcitx", calls)
         self.assertNotIn("vscode.deb", calls)
         self.assertNotIn("linux-launcher", calls)
+        self.assertNotIn("chatgpt_", calls)
         self.assertEqual((self.home / "Downloads").resolve(), downloads)
         self.assertFalse((self.home / "MyDrive").is_symlink())
         self.assertFalse((self.home / ".sommelierrc").is_symlink())
@@ -210,11 +212,13 @@ esac
         self.prepare_install("Linux example generic")
         self.run_bash('''function setJapanese() { echo japanese >> "$TEST_LOG"; }
 function setVisualStudioCode() { echo linux-code >> "$TEST_LOG"; }
+function setCodexDesktop() { echo codex-desktop >> "$TEST_LOG"; }
 main
 ''')
         self.assert_common_tools()
         calls = self.log.read_text()
-        for expected in ("sudo apt install screen\n", "japanese", "linux-code", "linux-launcher"):
+        for expected in ("sudo apt install screen ca-certificates curl\n", "japanese", "linux-code",
+                         "codex-desktop", "linux-launcher"):
             self.assertIn(expected, calls)
         self.assertEqual(os.readlink(self.home / "Downloads"), "/mnt/chromeos/MyFiles/Downloads")
         self.assertEqual(os.readlink(self.home / "MyDrive"), "/mnt/chromeos/GoogleDrive/MyDrive")
@@ -233,6 +237,122 @@ main
         self.assertNotIn("sudo", calls)
         self.assertNotIn("linux-launcher", calls)
         self.assertFalse((self.home / "Downloads").is_symlink())
+
+    def desktop_stubs(self, architecture="amd64"):
+        self.command("dpkg", f'printf "%s\\n" "{architecture}"\n')
+        self.command("sudo", 'printf "%s\\n" "sudo $*" >> "$TEST_LOG"\n')
+        self.command("curl", '''printf '%s\\n' "curl $*" >> "$TEST_LOG"
+while [[ $# -gt 0 ]]; do
+  if [[ "$1" == --output ]]; then printf 'synthetic deb' > "$2"; fi
+  shift
+done
+''')
+        self.command("dpkg-deb", '''case "$*" in
+  *chatgpt*Package) echo "${TEST_DEB_PACKAGE:-chatgpt}" ;;
+  *code*Package) echo "${TEST_DEB_PACKAGE:-code}" ;;
+  *Architecture) echo "${TEST_DEB_ARCHITECTURE:-amd64}" ;;
+  *) exit 9 ;;
+esac
+''')
+
+    def test_macos_installs_missing_desktop_apps_with_existing_homebrew(self):
+        self.command("brew", '''printf '%s\\n' "brew $*" >> "$TEST_LOG"
+if [[ "$1" == list ]]; then exit 1; fi
+''')
+        self.run_bash('setOptions; setMacDesktopApps')
+        calls = self.log.read_text()
+        for cask in ("chatgpt", "google-chrome", "visual-studio-code"):
+            self.assertIn("brew install --cask " + cask, calls)
+        self.assertNotIn("--cask codex\n", calls)
+
+    def test_macos_keeps_installed_desktop_apps_unless_upgrade_is_explicit(self):
+        self.command("brew", 'printf "%s\\n" "brew $*" >> "$TEST_LOG"\n')
+        self.run_bash('setOptions; setMacDesktopApps')
+        self.assertNotIn("install --cask", self.log.read_text())
+        self.assertNotIn("upgrade", self.log.read_text())
+        self.log.unlink()
+        self.run_bash('setOptions; setMacDesktopApps', extra_env={"UPGRADE_DESKTOP_APPS": "1"})
+        calls = self.log.read_text()
+        for cask in ("chatgpt", "google-chrome", "visual-studio-code"):
+            self.assertIn("brew upgrade --cask --greedy " + cask, calls)
+
+    def test_macos_preserves_apps_installed_outside_homebrew(self):
+        self.command("brew", '''printf '%s\\n' "brew $*" >> "$TEST_LOG"
+if [[ "$1" == list ]]; then exit 1; fi
+''')
+        (self.home / "Applications/ChatGPT.app").mkdir(parents=True)
+        self.run_bash('setOptions; setMacDesktopApps')
+        self.assertNotIn("install --cask chatgpt", self.log.read_text())
+
+    def test_codex_desktop_reuses_installed_package_without_download(self):
+        self.command("dpkg-query", "echo 'install ok installed'\n")
+        self.command("curl", "echo 'Unexpected download' >&2\nexit 99\n")
+        self.run_bash('setOptions; setCodexDesktop')
+        self.assertFalse(self.log.exists())
+
+    def test_codex_desktop_downloads_architecture_specific_deb_and_reuses_cache(self):
+        self.desktop_stubs("arm64")
+        self.command("dpkg-query", "exit 1\n")
+        body = '''setOptions
+function getDesktopLinuxRelease() { echo debian:13; }
+setCodexDesktop
+'''
+        environment = {"TEST_DEB_ARCHITECTURE": "arm64"}
+        self.run_bash(body, extra_env=environment)
+        calls = self.log.read_text()
+        self.assertIn("https://persistent.oaistatic.com/codex-app-prod/linux/deb/latest/chatgpt_arm64.deb", calls)
+        self.assertIn("sudo apt install " + str(self.home / ".cache/dotfiles/chatgpt_arm64.deb"), calls)
+        self.log.unlink()
+        self.run_bash(body, extra_env=environment)
+        self.assertNotIn("curl ", self.log.read_text())
+
+    def test_wrong_deb_metadata_stops_before_install(self):
+        self.desktop_stubs()
+        result = self.run_bash('''setOptions
+if installDesktopDeb chatgpt amd64 https://example.invalid/package.deb; then exit 99; fi
+''', extra_env={"TEST_DEB_PACKAGE": "other-package"})
+        self.assertIn("導入を中止", result.stderr)
+        self.assertNotIn("sudo apt install", self.log.read_text())
+        self.assertFalse((self.home / ".cache/dotfiles/chatgpt_amd64.deb").exists())
+
+    def test_codex_desktop_refuses_unsupported_release_before_download(self):
+        self.command("dpkg-query", "exit 1\n")
+        result = self.run_bash('''setOptions
+function getDesktopLinuxRelease() { echo debian:12; }
+if setCodexDesktop; then exit 99; fi
+''')
+        self.assertIn("公式対象", result.stderr)
+        self.assertFalse(self.log.exists())
+
+    def test_package_database_error_does_not_trigger_desktop_download(self):
+        self.command("dpkg-query", "exit 2\n")
+        result = self.run_bash('setOptions; if setCodexDesktop; then exit 99; fi')
+        self.assertIn("導入状態を確認できません", result.stderr)
+        self.assertFalse(self.log.exists())
+
+    def test_failed_download_is_not_installed_even_with_valid_stale_partial(self):
+        self.desktop_stubs()
+        self.command("curl", "exit 22\n")
+        cache = self.home / ".cache/dotfiles/chatgpt_amd64.deb.part"
+        cache.parent.mkdir(parents=True)
+        cache.write_text("stale incomplete download")
+        self.run_bash('''setOptions
+if installDesktopDeb chatgpt amd64 https://example.invalid/package.deb; then exit 99; fi
+''')
+        self.assertFalse(self.log.exists())
+        self.assertFalse(cache.with_suffix("").exists())
+
+    def test_vscode_uses_arm64_package_and_keeps_existing_cli(self):
+        self.desktop_stubs("arm64")
+        self.run_bash('''setOptions
+function command() { if [[ "$*" == '-v code' ]]; then return 1; fi; builtin command "$@"; }
+setVisualStudioCode
+''', extra_env={"TEST_DEB_ARCHITECTURE": "arm64"})
+        self.assertIn("https://update.code.visualstudio.com/latest/linux-deb-arm64/stable", self.log.read_text())
+        self.log.unlink()
+        self.command("code", "exit 0\n")
+        self.run_bash('setOptions; setVisualStudioCode')
+        self.assertFalse(self.log.exists())
 
 
 if __name__ == "__main__":
