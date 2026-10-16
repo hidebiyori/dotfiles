@@ -165,6 +165,28 @@ WSL の `CODEX_HOME` 指定を優先し、未指定なら Windows 側の `CODEX_
 WSL 内で別途 Codex CLI を使う場合の既定保存先は `~/.codex` で、設定・認証・履歴は自動共有しない。
 [公式の Windows / WSL 設定](https://learn.chatgpt.com/docs/windows/windows-app#windows-subsystem-for-linux-wsl)を参照。
 
+#### Codex 共通指示の更新と同期
+
+WSL の `~/.codex/AGENTS.md` はシンボリックリンクなので、元ファイルの変更が即時に見える。
+Windows 側の Codex 保存先には通常ファイルをコピーするため、編集・`git pull` だけでは更新されない。
+コピー先で直接編集すると、次の再適用で上書きされる。共通指示の編集先は `src/.codex/AGENTS.md` に統一する。
+
+`u` / `bin/install.sh` の再実行でコピーを更新できる。
+パッケージ更新等を実行せず、共通指示だけを現在のチェックアウトから再コピーする場合は WSL 内で次を実行する。
+`CODEX_HOME` を独自に使っている場合は、対象アプリと同じ保存先を指定したシェルで行う。
+
+```bash
+bash -c 'source "$HOME/git/dotfiles/bin/install.sh"; setOptions; setCodexInstructions'
+```
+
+これはリポジトリの取得・更新は行わない。コピー後の指示を読み込むには Codex の新しいセッションを開始する。
+[共通指示の読み込みに関する公式説明](https://learn.chatgpt.com/docs/agent-configuration/agents-md)も参照。
+
+2026-10-17 に Ubuntu / WSL と Windows の通常権限で、一時ファイルを使ってリンクを検証した。
+Windows PowerShell から WSL の元ファイルは読み取れたが、Windows 側へ WSL の `ln -s` で作ったリンク経由の読み取りは失敗した。
+Windows の `mklink` も「この操作を実行するための十分な特権がありません」で作成できなかった。
+このため自動セットアップはコピー方式を維持する。管理者権限・開発者モードでの作成や、Codex アプリでのリンク経由の読み込み・変更追従は未検証。
+
 ### GitHub の PR を WSL から作成する準備
 
 GitHub CLI（`gh`）は Windows 側に winget、WSL 側に apt で導入する。
