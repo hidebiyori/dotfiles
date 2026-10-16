@@ -87,6 +87,44 @@ fi
         self.assertNotIn("set-url", self.log.read_text())
         self.assertIn(" pull", self.log.read_text())
 
+    def test_repository_can_be_reapplied_and_updated_without_merging_divergence(self):
+        def git(*arguments, cwd=None):
+            return subprocess.run(["git", *arguments], cwd=cwd or self.home, env=self.env,
+                                  text=True, capture_output=True, check=True).stdout.strip()
+
+        origin = self.home / "origin.git"
+        author = self.home / "author"
+        checkout = self.home / "checkout"
+        git("init", "--bare", "--initial-branch=main", str(origin))
+        git("clone", str(origin), str(author))
+        git("config", "user.name", "Installer test", cwd=author)
+        git("config", "user.email", "installer@example.invalid", cwd=author)
+
+        def publish(contents):
+            (author / "version").write_text(contents)
+            git("add", "version", cwd=author)
+            git("commit", "-m", "Update fixture", cwd=author)
+            git("push", "origin", "main", cwd=author)
+
+        publish("first")
+        body = 'setOptions; setGitRepository ' + shlex.quote(str(origin)) + ' ' + shlex.quote(str(checkout))
+        for _ in range(3):
+            self.run_bash(body)
+        publish("second")
+        self.run_bash(body)
+        self.assertEqual((checkout / "version").read_text(), "second")
+        git("config", "user.name", "Installer test", cwd=checkout)
+        git("config", "user.email", "installer@example.invalid", cwd=checkout)
+        (checkout / "local-work").write_text("preserve")
+        git("add", "local-work", cwd=checkout)
+        git("commit", "-m", "Local fixture change", cwd=checkout)
+        previous = git("rev-parse", "HEAD", cwd=checkout)
+        publish("third")
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.run_bash(body)
+        self.assertEqual(git("rev-parse", "HEAD", cwd=checkout), previous)
+        self.assertEqual((checkout / "local-work").read_text(), "preserve")
+
     def prepare_install(self, kernel):
         self.env["TEST_KERNEL"] = kernel
         repository = self.home / "git/dotfiles"
@@ -188,6 +226,77 @@ esac
         self.assertIn("フォルダ取得に失敗", result.stderr)
         self.assertFalse((self.home / "Downloads").is_symlink())
 
+    def test_existing_directory_links_do_not_rewrite_source_files(self):
+        repository = self.prepare_install("Linux example microsoft-standard-WSL2")
+        source = repository / "src"
+        hashes = {str(path.relative_to(source)): hashlib.sha256(path.read_bytes()).hexdigest()
+                  for path in source.rglob('*') if path.is_file()}
+        destinations = []
+        for relative in (".agents/skills/japanese-commit", ".config/git"):
+            destination = self.home / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.symlink_to(source / relative, target_is_directory=True)
+            destinations.append((destination, destination.lstat().st_ino))
+        for _ in range(3):
+            self.run_bash('setOptions; setSymbolicLink "$PJ_ROOT/src" "$HOME"')
+        self.assertEqual(hashes, {str(path.relative_to(source)): hashlib.sha256(path.read_bytes()).hexdigest()
+                                  for path in source.rglob('*') if path.is_file()})
+        for destination, inode in destinations:
+            self.assertEqual(destination.lstat().st_ino, inode)
+
+    def test_wsl_main_repeatedly_preserves_identical_links_and_copies(self):
+        self.prepare_install("Linux example microsoft-standard-WSL2")
+        appdata, _ = self.prepare_windows()
+        self.run_bash("main")
+        destinations = [self.home / name for name in (".bashrc", ".codex/AGENTS.md", "Downloads")]
+        destinations += [appdata / "Code/User" / name for name in ("settings.json", "keybindings.json")]
+        for path in destinations:
+            os.utime(path, ns=(1_000_000_000, 1_000_000_000), follow_symlinks=False)
+        before = [(path.lstat().st_ino, path.lstat().st_mtime_ns) for path in destinations]
+        for _ in range(2):
+            self.run_bash("main")
+        self.assertEqual(before, [(path.lstat().st_ino, path.lstat().st_mtime_ns) for path in destinations])
+
+    def test_windows_settings_that_already_reference_source_are_preserved(self):
+        repository = self.prepare_install("Linux example microsoft-standard-WSL2")
+        appdata, _ = self.prepare_windows()
+        code_user = appdata / "Code/User"
+        code_user.mkdir(parents=True)
+        for name in ("settings.json", "keybindings.json"):
+            (code_user / name).symlink_to(repository / "src/.config/Code/User" / name)
+        for _ in range(3):
+            self.run_bash("main")
+        for name in ("settings.json", "keybindings.json"):
+            self.assertTrue((code_user / name).is_symlink())
+
+    def test_windows_settings_directory_collision_stops_without_nested_copy(self):
+        self.prepare_install("Linux example microsoft-standard-WSL2")
+        appdata, _ = self.prepare_windows()
+        collision = appdata / "Code/User/settings.json"
+        collision.mkdir(parents=True)
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.run_bash("main")
+        self.assertEqual(list(collision.iterdir()), [])
+
+    def test_crostini_repeated_setup_preserves_real_downloads_and_drive_link(self):
+        self.prepare_install("Linux example generic")
+        downloads = self.home / "Downloads"
+        downloads.mkdir()
+        marker = downloads / "keep.txt"
+        marker.write_text("keep")
+        body = '''function setJapanese() { :; }
+function setVisualStudioCode() { :; }
+function setCodexDesktop() { :; }
+main
+'''
+        self.run_bash(body)
+        drive_inode = (self.home / "MyDrive").lstat().st_ino
+        for _ in range(2):
+            self.run_bash(body)
+        self.assertEqual(list(downloads.iterdir()), [marker])
+        self.assertEqual(marker.read_text(), "keep")
+        self.assertEqual((self.home / "MyDrive").lstat().st_ino, drive_inode)
+
     def test_wsl_unavailable_windows_paths_are_reported_without_stopping_cli_setup(self):
         self.prepare_install("Linux example microsoft-standard-WSL2")
         self.prepare_windows()
@@ -238,6 +347,32 @@ main
         self.assertNotIn("sudo", calls)
         self.assertNotIn("linux-launcher", calls)
         self.assertFalse((self.home / "Downloads").is_symlink())
+
+    def test_homebrew_outside_inherited_path_is_reused_on_repeated_runs(self):
+        brew = self.home / ".config/brew/bin/brew"
+        brew.parent.mkdir(parents=True)
+        brew.write_text('#!/bin/bash\nprintf "%s\\n" "brew $*" >> "$TEST_LOG"\n')
+        brew.chmod(0o755)
+        self.command("curl", "exit 99\n")
+        for _ in range(3):
+            self.run_bash("setOptions; setBrew", extra_env={"PATH": str(self.bin) + ":/usr/bin:/bin"})
+        self.assertEqual(self.log.read_text().splitlines(), ["brew update", "brew upgrade"] * 3)
+
+    def test_homebrew_diagnostic_warning_does_not_fail_successful_bootstrap(self):
+        self.command("curl", "exit 0\n")
+        self.command("tar", '''mkdir -p "$HOME/.config/brew/bin"
+cat > "$HOME/.config/brew/bin/brew" <<'BREW'
+#!/bin/bash
+printf '%s\\n' "brew $*" >> "$TEST_LOG"
+if [[ "$1" == doctor ]]; then exit 1; fi
+BREW
+chmod +x "$HOME/.config/brew/bin/brew"
+''')
+        environment = {"PATH": str(self.bin) + ":/usr/bin:/bin"}
+        result = self.run_bash("setOptions; setBrew", extra_env=environment)
+        self.assertIn("brew doctor の案内", result.stderr)
+        self.run_bash("setOptions; setBrew", extra_env=environment)
+        self.assertEqual(self.log.read_text().count("brew install --cask google-japanese-ime"), 1)
 
     def desktop_stubs(self, architecture="amd64"):
         self.command("dpkg", f'printf "%s\\n" "{architecture}"\n')
