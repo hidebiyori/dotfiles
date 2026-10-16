@@ -106,6 +106,33 @@ function copyFileIfChanged()
   cp "${source}" "${destination}"
 }
 
+function setCodexInstructions()
+{
+  local codexHome="${CODEX_HOME:-}"
+  if [[ -z "${codexHome}" ]] && isWsl; then
+    if ! command -v powershell.exe >/dev/null 2>&1 || ! command -v wslpath >/dev/null 2>&1; then
+      echo 'WSL: Windows 側の Codex 共通指示を配置できません。CODEX_HOME を指定してください。' >&2
+      return
+    fi
+    local windowsCodexHome
+    windowsCodexHome="$(powershell.exe -NoProfile -NonInteractive -Command '
+      $ErrorActionPreference = "Stop"
+      [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+      if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE ".codex" }
+    ')" || return
+    windowsCodexHome="${windowsCodexHome//$'\r'/}"
+    codexHome="$(wslpath -u "${windowsCodexHome}")" || return
+  fi
+  [[ -n "${codexHome}" ]] || return 0
+  if [[ "${codexHome}" != /* ]]; then
+    echo 'CODEX_HOME は実行環境の絶対パスで指定してください。' >&2
+    return 1
+  fi
+  mkdir -p "${codexHome}"
+  # Copy for Windows apps as well: Linux symlinks on /mnt/c are not portable.
+  copyFileIfChanged "${PJ_ROOT}/src/.codex/AGENTS.md" "${codexHome}/AGENTS.md"
+}
+
 function setBrew()
 {
   # A previous child process may have installed brew without changing the
@@ -271,7 +298,7 @@ function setApt()
 {
   sudo apt update
   sudo apt upgrade
-  local packages=(screen ca-certificates curl)
+  local packages=(screen ca-certificates curl gh)
   if isWsl; then
     packages+=(git vim)
   fi
@@ -432,10 +459,12 @@ function main()
   setDirectories
   setGitRepository "${PJ_URL}"
   setSymbolicLink "${PJ_ROOT}/src" "${HOME}"
+  setCodexInstructions
 
   ### Mac ###
   if [[ "${uname}" =~ "Darwin" ]]; then
     setBrew
+    brew list --versions gh >/dev/null 2>&1 || brew install gh
     setMacDesktopApps
     brew list --versions python >/dev/null 2>&1 || brew install python
     setScreencapture

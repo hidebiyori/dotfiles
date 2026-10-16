@@ -28,7 +28,7 @@ class InstallerTests(unittest.TestCase):
             "TEST_LOG": str(self.log),
         }
         for name in ("WSL_DISTRO_NAME", "WSL_INTEROP", "INSTALL_FLUTTER", "BASH_ENV",
-                     "UPGRADE_DESKTOP_APPS", "XDG_CACHE_HOME"):
+                     "UPGRADE_DESKTOP_APPS", "XDG_CACHE_HOME", "CODEX_HOME"):
             self.env.pop(name, None)
 
     def command(self, name, contents):
@@ -46,6 +46,20 @@ class InstallerTests(unittest.TestCase):
             capture_output=True,
             check=True,
         )
+
+    def test_wsl_browser_passes_url_as_data_and_propagates_failure(self):
+        self.command("powershell.exe", 'cat > "$TEST_LOG"; exit "${TEST_BROWSER_EXIT:-0}"\n')
+        url = "https://example.com/login?q=a&next=b#fragment"
+        script = ROOT / "src/bin/wsl-browser"
+        result = subprocess.run([str(script), url], env=self.env, capture_output=True)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(self.log.read_text(), url)
+        result = subprocess.run([str(script), url], env={**self.env, "TEST_BROWSER_EXIT": "7"},
+                                capture_output=True)
+        self.assertEqual(result.returncode, 7)
+        result = subprocess.run([str(script), "file:///tmp/example"], env=self.env,
+                                capture_output=True)
+        self.assertEqual(result.returncode, 2)
 
     def git_stub(self):
         self.command("git", '''printf '%s\\n' "$*" >> "$TEST_LOG"
@@ -127,6 +141,7 @@ fi
 
     def prepare_install(self, kernel):
         self.env["TEST_KERNEL"] = kernel
+        self.env["CODEX_HOME"] = str(self.home / ".codex")
         repository = self.home / "git/dotfiles"
         (repository / "bin").mkdir(parents=True)
         shutil.copytree(ROOT / "src", repository / "src")
@@ -143,6 +158,24 @@ fi
             self.command(name, f'echo "Unexpected GUI/download command: {name}" >&2\nexit 99\n')
         self.command("which", 'exit 1\n')
         return repository
+
+    def test_codex_instructions_copy_to_custom_home(self):
+        repository = self.prepare_install("Linux example")
+        target = self.home / "custom codex"
+        self.run_bash("setCodexInstructions; setCodexInstructions", extra_env={"CODEX_HOME": str(target)})
+        self.assertEqual((target / "AGENTS.md").read_bytes(),
+                         (repository / "src/.codex/AGENTS.md").read_bytes())
+        self.assertFalse((target / "AGENTS.md").is_symlink())
+
+    def test_wsl_codex_instructions_discover_windows_home(self):
+        repository = self.prepare_install("Linux Microsoft")
+        target = self.home / "Windows Codex"
+        self.command("powershell.exe", "printf '%s' 'C:/Users/example/.codex'\n")
+        self.command("wslpath", 'printf "%s" "$TEST_CODEX_TARGET"\n')
+        self.run_bash('uname="Linux Microsoft"; setCodexInstructions',
+                      extra_env={"CODEX_HOME": "", "TEST_CODEX_TARGET": str(target)})
+        self.assertEqual((target / "AGENTS.md").read_bytes(),
+                         (repository / "src/.codex/AGENTS.md").read_bytes())
 
     def prepare_windows(self):
         appdata = self.home / "windows 日本語/AppData/Roaming"
@@ -202,7 +235,7 @@ esac
         self.run_bash("main")
         self.assert_common_tools()
         calls = self.log.read_text()
-        self.assertIn("sudo apt install screen ca-certificates curl git vim", calls)
+        self.assertIn("sudo apt install screen ca-certificates curl gh git vim", calls)
         self.assertNotIn("fcitx", calls)
         self.assertNotIn("vscode.deb", calls)
         self.assertNotIn("linux-launcher", calls)
@@ -328,7 +361,7 @@ main
 ''')
         self.assert_common_tools()
         calls = self.log.read_text()
-        for expected in ("sudo apt install screen ca-certificates curl\n", "japanese", "linux-code",
+        for expected in ("sudo apt install screen ca-certificates curl gh\n", "japanese", "linux-code",
                          "codex-desktop", "linux-launcher"):
             self.assertIn(expected, calls)
         self.assertEqual(os.readlink(self.home / "Downloads"), "/mnt/chromeos/MyFiles/Downloads")
@@ -342,7 +375,7 @@ main
 main
 ''')
         calls = self.log.read_text()
-        for expected in ("brew update", "brew upgrade", "defaults write com.apple.screencapture", "skill-python",
+        for expected in ("brew update", "brew upgrade", "brew list --versions gh", "defaults write com.apple.screencapture", "skill-python",
                          "mise use --global node@lts", "mise use --global npm@latest",
                          "mise exec node@lts npm@latest -- npm install -g firebase-tools"):
             self.assertIn(expected, calls)

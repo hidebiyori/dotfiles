@@ -68,3 +68,9 @@
   ls = log --pretty=format:'%ai %h %s: %an%C(red)%d%C(reset)' -n 24 --reverse
   ll = log --pretty=fuller -p
   lt = ls -n 48 --reverse
+[credential "https://github.com"]
+	helper =
+	helper = !gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !gh auth git-credential

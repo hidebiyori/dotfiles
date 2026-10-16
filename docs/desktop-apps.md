@@ -19,6 +19,10 @@ Mac と Chromebook は従来の `bin/install.sh` / `u` に組み込んでいる�
 Chromebook の Chrome は ChromeOS が管理するため、Linux 側に Chrome / Chromium を追加しない。
 WSL でも Linux 用のデスクトップアプリは導入しない。
 
+デスクトップアプリに加えて GitHub CLI（`gh`）も全環境で導入する。
+Mac は Homebrew、Linux / WSL は apt、Windows は winget の `GitHub.cli` を使う。
+[初回認証](../README.md#github-cli-の初回認証)は利用者が行う。
+
 ## Windows
 
 `bin/install-windows.ps1` の `Get-ManagedWindowsApps` に、アプリ名・完全な ID・source をまとめている。

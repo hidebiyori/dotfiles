@@ -48,10 +48,11 @@ function Test-Case {
     }
 }
 
-Test-Case 'Exact desktop package IDs, without Codex CLI' {
+Test-Case 'Exact desktop and GitHub CLI package IDs, without Codex CLI' {
     $apps = @(Get-ManagedWindowsApps)
-    Assert-True ($apps.Count -eq 3) 'Expected three managed apps.'
+    Assert-True ($apps.Count -eq 4) 'Expected four managed apps.'
     Assert-True ($apps[0].Id -eq '9PLM9XGG6VKS' -and $apps[0].Source -eq 'msstore') 'Expected official desktop Store package.'
+    Assert-True ($apps[3].Id -eq 'GitHub.cli' -and $apps[3].Source -eq 'winget') 'Expected GitHub CLI package.'
     Assert-True ($apps[1].Id -eq 'Google.Chrome' -and $apps[2].Id -eq 'Microsoft.VisualStudioCode') 'Unexpected package IDs.'
 }
 
@@ -68,7 +69,7 @@ Test-Case 'Installed apps are not reinstalled' {
         return 0
     }
     Install-WindowsApps
-    Assert-True ($script:Calls.Count -eq 3) 'Only three list queries expected.'
+    Assert-True ($script:Calls.Count -eq 4) 'Only four list queries expected.'
     Assert-True (@($script:Calls | Where-Object { -not $_.StartsWith('list ') }).Count -eq 0) 'Unexpected install or upgrade.'
 }
 
@@ -80,9 +81,10 @@ Test-Case 'Missing apps install only the exact selected packages' {
         return 0
     }
     Install-WindowsApps
-    Assert-True ($script:Calls.Count -eq 6) 'Expected one query and install per app.'
+    Assert-True ($script:Calls.Count -eq 8) 'Expected one query and install per app.'
     Assert-True ($script:Calls[1] -like 'install --id 9PLM9XGG6VKS --exact --source msstore *--no-upgrade') 'Wrong Store installation.'
     Assert-True ($script:Calls[3] -like 'install --id Google.Chrome --exact --source winget *') 'Wrong Chrome installation.'
+    Assert-True ($script:Calls[7] -like 'install --id GitHub.cli --exact --source winget *--no-upgrade') 'Wrong GitHub CLI installation.'
     Assert-True (($script:Calls -join ' ') -notlike '*--all*') 'Must not install/upgrade all applications.'
 }
 
@@ -104,8 +106,8 @@ Test-Case 'Explicit upgrades confirm installed packages after the no-update HRES
         return 0
     }
     Install-WindowsApps -Upgrade
-    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('upgrade --id ') }).Count -eq 3) 'Expected three targeted upgrades.'
-    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('list --id ') }).Count -eq 6) 'Expected exact installation checks before and after no-update results.'
+    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('upgrade --id ') }).Count -eq 4) 'Expected four targeted upgrades.'
+    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('list --id ') }).Count -eq 8) 'Expected exact installation checks before and after no-update results.'
 }
 
 Test-Case 'All known no-change results require a confirmed installation' {
@@ -127,8 +129,8 @@ Test-Case 'All known no-change results require a confirmed installation' {
         }
         Install-WindowsApps
     }
-    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('install --id ') }).Count -eq 9) 'Expected install attempts for initially missing packages.'
-    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('list --id ') }).Count -eq 18) 'Every no-change result must be verified.'
+    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('install --id ') }).Count -eq 12) 'Expected install attempts for initially missing packages.'
+    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('list --id ') }).Count -eq 24) 'Every no-change result must be verified.'
 }
 
 Test-Case 'A no-change result with missing or unreadable installation remains an error' {
@@ -196,7 +198,7 @@ Test-Case 'Retry after a partial failure installs only the remaining packages' {
     Assert-True ($script:Installed.Count -eq 1) 'Only the first app should have been installed.'
     Install-WindowsApps
     Install-WindowsApps
-    Assert-True ($script:Installed.Count -eq 3) 'All managed packages should be present after retry.'
+    Assert-True ($script:Installed.Count -eq 4) 'All managed packages should be present after retry.'
     Assert-True (@($script:Calls | Where-Object { $_.StartsWith('install --id 9PLM9XGG6VKS ') }).Count -eq 1) 'The completed installation was repeated.'
     Assert-True (@($script:Calls | Where-Object { $_.StartsWith('install --id Microsoft.VisualStudioCode ') }).Count -eq 1) 'VS Code should install only after recovery.'
 }
@@ -251,7 +253,7 @@ Test-Case 'Full setup resumes WSL preparation and can be repeated after completi
         Assert-True (Invoke-WindowsSetup -Name Ubuntu) 'A ready setup should support consecutive reruns.'
     }
     Assert-True (Invoke-WindowsSetup -Name Ubuntu -Upgrade) 'Up-to-date packages should not fail the full setup.'
-    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('install --id ') }).Count -eq 3) 'Desktop packages should be installed once each.'
+    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('install --id ') }).Count -eq 4) 'Managed packages should be installed once each.'
     Assert-True (@($script:Calls | Where-Object { $_ -eq 'install-extension' }).Count -eq 1) 'The extension was reinstalled.'
     Assert-True (@($script:Calls | Where-Object { $_ -eq 'install-wsl' }).Count -eq 1) 'The WSL distribution was reinstalled.'
     Assert-True (@($script:Calls | Where-Object { $_ -eq 'linux-setup' }).Count -eq 4) 'Each ready run should reapply Linux settings.'

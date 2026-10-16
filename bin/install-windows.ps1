@@ -17,6 +17,7 @@ function Get-ManagedWindowsApps {
         [pscustomobject]@{ Name = 'Codex / ChatGPT desktop'; Id = '9PLM9XGG6VKS'; Source = 'msstore' }
         [pscustomobject]@{ Name = 'Google Chrome'; Id = 'Google.Chrome'; Source = 'winget' }
         [pscustomobject]@{ Name = 'Visual Studio Code'; Id = 'Microsoft.VisualStudioCode'; Source = 'winget' }
+        [pscustomobject]@{ Name = 'GitHub CLI'; Id = 'GitHub.cli'; Source = 'winget' }
     )
 }
 
