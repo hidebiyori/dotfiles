@@ -79,6 +79,22 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\instal
 スクリプトの対象一覧は `Get-ManagedWindowsApps` で管理する。
 スクリプト自体は自動更新しないため、最新版を使うときは最初のダウンロード・内容確認を行う。
 
+## 同じコマンドを再実行した場合
+
+- 導入済みの3アプリと WSL 拡張は再インストールしない。
+- 指定名の WSL2 があれば再利用し、ディストリビューションや Linux ユーザーを作り直さない。
+- 準備済みの WSL では、既存の clone を更新して共通設定を再適用する。
+  同じ設定リンク・Downloads リンクは再利用し、VS Code の設定は内容が変わった場合だけコピーする。
+- `-UpgradeApps` 付きで更新がなくても、対象の導入済み状態を再確認できれば正常終了する。
+  状態確認の直後に別の処理で導入されていた場合も同様に扱う。
+- 途中で失敗した場合も、原因を解消して同じコマンドを再実行する。
+  先に導入済みとなったアプリを入れ直す必要はない。
+
+WSL 内の apt・Node LTS・Firebase CLI の更新等は引き続き行う。
+バージョンや全ファイルの更新日時を固定するものではなく、
+[共通の再実行方針](../README.md#再実行時の動作)に沿って必要な処理だけを繰り返す。
+再起動や Linux ユーザー作成待ちは終了コード `2` のままとし、完了とは扱わない。
+
 ## WSL 内の clone と既存データの扱い
 
 WSL 側の保存先は Linux ユーザーの `~/git/dotfiles`。
@@ -144,9 +160,12 @@ WSL 内の clone に Git for Windows は不要だが、Windows 版 Codex の一�
 
 Windows アプリは PowerShell スクリプト、WSL 内の共通設定・開発ツールは `u` で再適用する。
 `u` には従来どおり apt upgrade、Node LTS / Firebase CLI の更新と VS Code 設定の上書きが含まれる。
+VS Code 設定の内容が同じ場合はコピーを省くが、手動変更した内容はリポジトリの設定で置き換える。
 
 スクリプトの終了コードは、依頼した範囲の完了が `0`、再起動 / ユーザー作成待ちが `2`、エラーが `1`。
 winget の状態確認や WSL の起動に失敗した場合は、未導入と決めつけて再インストールせず停止する。
+「導入済み・更新不要」の既知の WinGet 終了コードも、同じ ID・source の導入確認に成功した場合だけ許容する。
+通信・権限・署名 / ハッシュ検証等の失敗は、既にアプリがあっても正常終了と扱わない。
 エラーを解消してから同じコマンドを再実行する。既に反映した設定を自動で元へ戻す処理はない。
 
 WSL の導入エラーは [Microsoft の対処手順](https://learn.microsoft.com/windows/wsl/troubleshooting#installation-issues)、
@@ -157,6 +176,8 @@ WSL の導入エラーは [Microsoft の対処手順](https://learn.microsoft.co
 
 ローカルの Bash テストと、GitHub Actions の Windows PowerShell 5.1 / PowerShell 7 で、
 コマンドをスタブ化して分岐・引き継ぎ・失敗時の停止を検証する。
+初回から再起動 / ユーザー作成待ち、完了後の3回連続実行と更新不要、
+途中で失敗した後の再開も検証対象にしている。
 実際の WSL 初回導入、再起動、winget のインストーラー、VS Code / Codex の接続は実機での確認が必要。
 
 - [WSL の導入と初回ユーザー設定](https://learn.microsoft.com/windows/wsl/install)

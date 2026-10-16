@@ -74,7 +74,22 @@ function Install-WindowsApps {
             $installArguments += '--no-upgrade'
         }
         $result = Invoke-WingetNative -CommandArguments $installArguments
-        if ($result -ne 0 -and -not ($action -eq 'upgrade' -and $result -eq 2316632107L)) {
+        if ($result -ne 0) {
+            # Official HRESULTs: microsoft/winget-cli, AppInstallerErrors.h.
+            # A concurrent install or an up-to-date package is a normal rerun.
+            $noChangeResults = @(
+                2316632107L, # APPINSTALLER_CLI_ERROR_UPDATE_NOT_APPLICABLE
+                2316632143L, # APPINSTALLER_CLI_ERROR_UPGRADE_VERSION_NOT_NEWER
+                2316632161L  # APPINSTALLER_CLI_ERROR_PACKAGE_ALREADY_INSTALLED
+            )
+            if ($result -in $noChangeResults) {
+                $confirmedExit = Invoke-WingetNative -CommandArguments $queryArguments
+                if ($confirmedExit -eq 0) {
+                    Write-Host 'Already installed or no newer version; keeping the confirmed installation.'
+                    continue
+                }
+                throw ("WinGet reported no change for {0}, but its installation could not be confirmed (exit {1})." -f $app.Id, $confirmedExit)
+            }
             throw ("WinGet {0} failed for {1} (exit {2})." -f $action, $app.Id, $result)
         }
     }
