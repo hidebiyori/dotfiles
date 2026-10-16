@@ -50,6 +50,11 @@ Homebrew 未導入時の既存処理も配布アーカイブを取得・展開�
 
 ## Windows 11 / WSL2
 
+新しい Windows PC で最初から構築する場合は、
+[Windows 初回セットアップ手順](docs/windows-setup.md)を参照する。
+実行場所・順番・確認方法と、WSL の導入も含めて自動化できる範囲をまとめている。
+`bin/install.sh` は WSL 起動後の処理を担当し、Windows 側の WSL 導入・再起動・初回ユーザー作成は行わない。
+
 Windows 側に VS Code と WSL 拡張、WSL 側に開発ツールを導入する。
 日本語入力は Windows Terminal / Windows 版 VS Code の Windows 側 IME を使う。
 
