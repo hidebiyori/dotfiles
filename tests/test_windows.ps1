@@ -209,6 +209,13 @@ Test-Case 'WSL capture preserves Unicode and restores console encoding' {
     Assert-True ([Console]::OutputEncoding.CodePage -eq $previous) 'Console encoding was not restored.'
 }
 
+Test-Case 'WSL capture restores console encoding on failure' {
+    $previous = [Console]::OutputEncoding.CodePage
+    Set-Mock 'wsl.exe' { $global:LASTEXITCODE = 37 }
+    Assert-Throws { Invoke-WslCapture -CommandArguments @('synthetic') } '*WSL command failed (exit 37)*'
+    Assert-True ([Console]::OutputEncoding.CodePage -eq $previous) 'Failed capture changed the console encoding.'
+}
+
 Test-Case 'WSL registrations are selected by exact name and version' {
     Set-Mock 'Test-Path' { param([string]$LiteralPath) return $true }
     Set-Mock 'Get-ChildItem' { param([string]$LiteralPath) [pscustomobject]@{ PSPath = 'synthetic:one' }; [pscustomobject]@{ PSPath = 'synthetic:two' } }

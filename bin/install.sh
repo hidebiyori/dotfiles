@@ -125,7 +125,9 @@ function installDesktopDeb()
   local downloadedDeb="${cachedDeb}.part"
   mkdir -p "${cacheRoot}" || return
   if [[ ! -f "${cachedDeb}" ]]; then
-    curl --fail --location --proto '=https' --tlsv1.2 --output "${downloadedDeb}" "${packageUrl}" || return
+    curl --fail --location --proto '=https' --tlsv1.2 \
+      --user-agent 'dotfiles-desktop-setup/1.0 (+https://github.com/hidebiyori/dotfiles)' \
+      --output "${downloadedDeb}" "${packageUrl}" || return
     if [[ "$(dpkg-deb --field "${downloadedDeb}" Package)" != "${package}" ||
           "$(dpkg-deb --field "${downloadedDeb}" Architecture)" != "${architecture}" ]]; then
       echo "${package}: 取得したパッケージの名前またはアーキテクチャが異なります。導入を中止します。" >&2

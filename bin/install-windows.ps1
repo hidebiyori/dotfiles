@@ -172,7 +172,8 @@ if [ -e "${repository}" ]; then
     echo '~/git/dotfiles already exists but is not a Git checkout; keeping it unchanged.' >&2
     exit 1
   fi
-  if [ -n "$(git -C "${repository}" status --porcelain)" ]; then
+  checkout_status="$(git -C "${repository}" status --porcelain)"
+  if [ -n "${checkout_status}" ]; then
     echo '~/git/dotfiles has local changes; commit or preserve them before retrying.' >&2
     exit 1
   fi

@@ -35,6 +35,7 @@ if [[ "$1" == clone ]]; then
   mkdir -p "$3/.git" "$3/bin"
   printf '%s\\n' 'echo installer >> "$TEST_LOG"' > "$3/bin/install.sh"
 elif [[ "$*" == *'status --porcelain' ]]; then
+  if [[ "${TEST_STATUS_FAIL:-0}" == 1 ]]; then exit 3; fi
   printf '%s' "${TEST_DIRTY:-}"
 elif [[ "$*" == *'branch --show-current' ]]; then
   echo "${TEST_BRANCH:-main}"
@@ -102,6 +103,13 @@ fi
     def test_unrelated_origin_is_not_executed(self):
         self.existing_checkout()
         result = self.run_bootstrap(TEST_ORIGIN="https://example.invalid/unrelated.git")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn("pull ", self.log.read_text())
+        self.assertNotIn("installer", self.log.read_text())
+
+    def test_failed_checkout_status_stops_before_pull_or_install(self):
+        self.existing_checkout()
+        result = self.run_bootstrap(TEST_STATUS_FAIL="1")
         self.assertNotEqual(result.returncode, 0)
         self.assertNotIn("pull ", self.log.read_text())
         self.assertNotIn("installer", self.log.read_text())

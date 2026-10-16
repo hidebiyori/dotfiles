@@ -136,6 +136,9 @@ Windows と WSL の Codex の保存先・認証情報は自動共有しない。
 
 サインイン、GitHub の push 認証、プロジェクトの取得・依存導入は個別に行う。
 Windows ネイティブの Git・Node、gh・gcloud・Docker・Android SDK は、この3アプリの一覧に含めていない。
+WSL 内の clone に Git for Windows は不要だが、Windows 版 Codex の一部の Git 機能は
+ネイティブの Git も必要とする。必要な場合は通常の PowerShell で
+`winget install --id Git.Git --exact --source winget` を別途実行する。
 
 ## 更新とエラー時の扱い
 
