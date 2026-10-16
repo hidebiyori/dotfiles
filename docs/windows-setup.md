@@ -168,6 +168,36 @@ winget の状態確認や WSL の起動に失敗した場合は、未導入と�
 通信・権限・署名 / ハッシュ検証等の失敗は、既にアプリがあっても正常終了と扱わない。
 エラーを解消してから同じコマンドを再実行する。既に反映した設定を自動で元へ戻す処理はない。
 
+### apt の警告だけが見え、進まないように見える場合
+
+`WARNING: apt does not have a stable CLI interface. Use with caution in scripts.` は、
+apt をスクリプトから利用する際の互換性についての警告で、それ自体は処理失敗を示さない。
+[APT のスクリプト利用に関する説明](https://manpages.debian.org/trixie/apt/apt.8.en.html#SCRIPT_USAGE_AND_DIFFERENCES_FROM_OTHER_APT_TOOLS)を参照。
+ダウンロード中や sudo / apt の入力待ちの場合もあるため、経過時間だけで停止とは判断しない。
+
+現在の入口は、WSL の標準入出力を元の PowerShell コンソールにつなぎ、
+進捗や改行のない確認プロンプトも表示した状態で実行する。
+sudo のパスワードや apt の `[Y/n]` は、その PowerShell で内容を確認して応答する。
+パスワード入力中に文字が表示されないのは通常の動作。
+
+古い入口には、WSL の通常出力が完了判定用の変数へ取り込まれ、
+警告だけが見えて進捗や確認メッセージが隠れる不具合があった。
+その場合も、別の Ubuntu ターミナルで設定が反映されているだけでは完了の確認にならない。
+設定リンクの配置は apt の実行より先に行うため。
+
+同じディストリビューションの別の Ubuntu ターミナルで、次の読み取り専用確認ができる。
+最初のコマンドは apt / dpkg と関連プロセス、次は apt の処理名と待機状態だけを表示する。
+
+```bash
+ps -eo pid,ppid,stat,etime,wchan:24,comm | grep -E 'apt|dpkg|sudo|http|https'
+ps -C apt -o pid=,stat=,etime=,wchan:24=,args= | awk '{print $1,$2,$3,$4,$5,$6}'
+```
+
+`apt` / `dpkg` の稼働中に別のセットアップを重ねたり、ロックファイルを削除したりしない。
+プロセス名や待機状態だけで、安全に中断できるとも断定しない。
+元の処理の終了を確認してから、最初のダウンロード手順で PowerShell ファイルを更新し、
+同じコマンドを再実行する。進行中のプロセスには、ファイルを更新しても修正は反映されない。
+
 WSL の導入エラーは [Microsoft の対処手順](https://learn.microsoft.com/windows/wsl/troubleshooting#installation-issues)、
 `code` が見つからない場合は [VS Code の PATH 設定](https://code.visualstudio.com/docs/setup/windows)、
 リソース上限の調整は [WSL の設定](https://learn.microsoft.com/windows/wsl/wsl-config#main-wsl-settings)を参照。
@@ -178,6 +208,8 @@ WSL の導入エラーは [Microsoft の対処手順](https://learn.microsoft.co
 コマンドをスタブ化して分岐・引き継ぎ・失敗時の停止を検証する。
 初回から再起動 / ユーザー作成待ち、完了後の3回連続実行と更新不要、
 途中で失敗した後の再開も検証対象にしている。
+コンソールへ出力する子プロセスを実際に起動して終了コードだけが戻ることと、
+空白・日本語を含む WSL スクリプトのパス、Linux 処理の失敗伝播も確認する。
 実際の WSL 初回導入、再起動、winget のインストーラー、VS Code / Codex の接続は実機での確認が必要。
 
 - [WSL の導入と初回ユーザー設定](https://learn.microsoft.com/windows/wsl/install)

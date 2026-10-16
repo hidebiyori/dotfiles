@@ -222,11 +222,30 @@ bash bin/install.sh
 '@
 }
 
+function Invoke-ConsoleNative {
+    param([string]$FilePath, [string[]]$CommandArguments)
+    # Start-Process bypasses PowerShell's success stream. Even when the caller
+    # captures a setup result, stdout/stderr and keyboard input stay connected
+    # to this console, including prompts that do not end with a newline.
+    $process = Start-Process -FilePath $FilePath -ArgumentList $CommandArguments -NoNewWindow -Wait -PassThru
+    try {
+        if ($null -eq $process.ExitCode) { throw 'Could not determine the console process exit code.' }
+        $process.ExitCode
+    } finally {
+        $process.Dispose()
+    }
+}
+
 function Invoke-WslBootstrapNative {
     param([string]$Name, [string]$LinuxPath)
-    # Inherit the console instead of piping the script to stdin: sudo/apt need it.
-    & wsl.exe --distribution $Name --exec bash --noprofile --norc $LinuxPath
-    if ($LASTEXITCODE -ne 0) { throw ("Linux setup failed (exit {0})." -f $LASTEXITCODE) }
+    Write-Host 'Running Linux setup in this console. Respond to sudo/apt prompts here; downloads may take time.'
+    $wslCommand = (Get-Command wsl.exe -ErrorAction Stop).Source
+    # Start-Process joins ArgumentList; quote the translated path for spaces.
+    $quotedPath = '"{0}"' -f $LinuxPath.Replace('"', '\"')
+    $exitCode = Invoke-ConsoleNative -FilePath $wslCommand -CommandArguments @(
+        '--distribution', $Name, '--exec', 'bash', '--noprofile', '--norc', $quotedPath
+    )
+    if ($exitCode -ne 0) { throw ("Linux setup failed (exit {0})." -f $exitCode) }
 }
 
 function Install-WslDotfiles {

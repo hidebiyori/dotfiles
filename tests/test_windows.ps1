@@ -336,6 +336,50 @@ Test-Case 'Temporary files are removed after Linux setup failure' {
     Assert-True (-not (Test-Path -LiteralPath $script:TemporaryBootstrap)) 'Failed bootstrap left a temporary file.'
 }
 
+Test-Case 'Console child output is visible without being captured as the process result' {
+    $result = @(Invoke-ConsoleNative -FilePath $env:ComSpec -CommandArguments @('/d', '/c', 'echo synthetic-linux-console-output'))
+    Assert-True ($result.Count -eq 1 -and $result[0] -eq 0) 'Child output must not enter the success stream or replace the exit code.'
+    $result = @(Invoke-ConsoleNative -FilePath $env:ComSpec -CommandArguments @('/d', '/c', 'exit /b 37'))
+    Assert-True ($result.Count -eq 1 -and $result[0] -eq 37) 'A failed console child must preserve its exit code.'
+}
+
+Test-Case 'WSL console launch keeps a boolean setup result and quotes Unicode paths with spaces' {
+    $script:LinuxConsolePath = '/mnt/c/' + [char]0x65e5 + [char]0x672c + ' User/bootstrap.sh'
+    Set-Mock 'Get-WslDistribution' { param([string]$Name) [pscustomobject]@{ Name = $Name; Version = 2 } }
+    Set-Mock 'Invoke-WslCapture' { param([string[]]$CommandArguments) '1000' }
+    Set-Mock 'Install-WslDotfiles' {
+        param([string]$Name)
+        Invoke-WslBootstrapNative -Name $Name -LinuxPath $script:LinuxConsolePath
+    }
+    Set-Mock 'Get-Command' {
+        param([string]$Name, $ErrorAction)
+        [pscustomobject]@{ Source = 'C:\Windows\System32\wsl.exe' }
+    }
+    Set-Mock 'Invoke-ConsoleNative' {
+        param([string]$FilePath, [string[]]$CommandArguments)
+        Assert-True ($FilePath -eq 'C:\Windows\System32\wsl.exe') 'Unexpected WSL executable.'
+        Assert-True (($CommandArguments[0..5] -join ' ') -eq '--distribution Ubuntu --exec bash --noprofile --norc') 'Unexpected WSL command.'
+        Assert-True ($CommandArguments.Count -eq 7 -and $CommandArguments[6] -eq ('"' + $script:LinuxConsolePath + '"')) 'The Unicode script path must remain one quoted argument.'
+        $script:Calls.Add('console-linux-setup')
+        return 0
+    }
+    # This output used to become part of $ready and disappear from the screen.
+    Set-Mock 'wsl.exe' { $global:LASTEXITCODE = 0; 'synthetic captured Linux output' }
+    $ready = Initialize-Wsl -Name Ubuntu
+    Assert-True ($ready -is [bool] -and $ready) 'Linux output must not be captured into the readiness result.'
+    Assert-True (($script:Calls -join ',') -eq 'console-linux-setup') 'Expected the console execution path.'
+}
+
+Test-Case 'A failed WSL console process stops the setup' {
+    Set-Mock 'Get-Command' {
+        param([string]$Name, $ErrorAction)
+        [pscustomobject]@{ Source = 'C:\Windows\System32\wsl.exe' }
+    }
+    Set-Mock 'Invoke-ConsoleNative' { param([string]$FilePath, [string[]]$CommandArguments) 37 }
+    Set-Mock 'wsl.exe' { $global:LASTEXITCODE = 0 }
+    Assert-Throws { Invoke-WslBootstrapNative -Name Ubuntu -LinuxPath /mnt/c/bootstrap.sh } '*Linux setup failed (exit 37)*'
+}
+
 Test-Case 'WSL capture preserves Unicode and restores console encoding' {
     $previous = [Console]::OutputEncoding.CodePage
     Set-Mock 'wsl.exe' {
