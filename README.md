@@ -5,6 +5,7 @@ hidebiyori の複数端末で、シェル等の共通設定と開発ツールを
 - `src/`: Bash・Vim・Git・Codex 等の設定ファイル。ホームディレクトリへシンボリックリンクで配置する。
 - `bin/install.sh`: このリポジトリの取得・更新、設定のリンク、OS 別のセットアップ、
   mise・Node（mise）・Firebase 等の導入をまとめて行う。Flutter は任意。
+- `bin/install-windows.ps1`: Windows アプリの導入と WSL の準備、WSL 内の Git 取得・一括セットアップへの入口。
 - 一括セットアップ対象は Mac、Chromebook の Linux 開発環境、Windows 11 の WSL2（Debian / Ubuntu）。
   Linux 分岐は apt を使用し、WSL では ChromeOS 専用処理を省く。
   Windows ネイティブの Git Bash では必要な設定・手順を個別に利用する。
@@ -50,69 +51,18 @@ Homebrew 未導入時の既存処理も配布アーカイブを取得・展開�
 
 ## Windows 11 / WSL2
 
-新しい Windows PC で最初から構築する場合は、
-[Windows 初回セットアップ手順](docs/windows-setup.md)を参照する。
-実行場所・順番・確認方法と、WSL の導入も含めて自動化できる範囲をまとめている。
-`bin/install.sh` は WSL 起動後の処理を担当し、Windows 側の WSL 導入・再起動・初回ユーザー作成は行わない。
+初回は **Windows の通常の PowerShell から `bin/install-windows.ps1` を実行する**。
+Git for Windows も、手動の `git clone` も事前準備には不要。
+[Windows セットアップ手順](docs/windows-setup.md)に、ファイルの取得・確認・実行方法をまとめている。
 
-Windows 側に VS Code と WSL 拡張、WSL 側に開発ツールを導入する。
-日本語入力は Windows Terminal / Windows 版 VS Code の Windows 側 IME を使う。
+- Windows 側: Codex / ChatGPT デスクトップ版・Chrome・VS Code を winget で導入し、WSL 拡張も追加する。
+- WSL 未準備時: WSL の導入だけ管理者承認を求める。必要な再起動と Linux ユーザー作成後、同じコマンドを再実行する。
+- WSL 準備後: WSL 内に Git を用意し、`~/git/dotfiles` へ clone / 更新して `bin/install.sh` を実行する。
+- Windows アプリだけなら `-AppsOnly`。管理対象アプリの更新も行うなら `-UpgradeApps` を明示する。
 
-初回は Windows の管理者 PowerShell で WSL と Ubuntu を導入する（導入済みなら省略）。
-
-```powershell
-wsl --install -d Ubuntu
-```
-
-必要な再起動と Linux ユーザーの作成を済ませ、`wsl -l -v` で対象の VERSION が `2` であることを確認する。
-Windows の PowerShell で VS Code を導入し、PATH が反映された新しい PowerShell で WSL 拡張を追加する。
-既に導入済みなら該当する操作を省く。
-
-```powershell
-winget install --id Microsoft.VisualStudioCode --exact --source winget
-code --install-extension ms-vscode-remote.remote-wsl
-```
-
-WSL の Ubuntu / Debian ターミナルでは、Git が未導入の場合だけ次を実行する。
-続けて上記の clone と `bash bin/install.sh` を実行する。
-
-```bash
-sudo apt update
-sudo apt install -y git
-```
-
-リポジトリは `/mnt/c` ではなく WSL 側の `~/git` に置く。
-Windows 側と WSL 側の Node・npm・依存ディレクトリは共有せず、プロジェクトの依存導入も WSL 側で行う。
-
-| 一括セットアップの対象 | WSL での処理 |
-| --- | --- |
-| OS パッケージ | apt update / upgrade と screen・ca-certificates・curl・git・vim・python3-venv の導入 |
-| mise | 未導入なら extrepo と mise の配布元を追加し、apt で導入 |
-| Node.js / npm | mise で実行時点の Node LTS をグローバル設定 |
-| Firebase CLI | mise の Node で firebase-tools をグローバル導入 |
-| スキル用 Python | 専用 venv に PyYAML 6.0.3 を導入。導入済みなら再利用 |
-| 共通設定・スキル | 従来どおり既存ファイルをシンボリックリンクで置き換える |
-| Downloads | Windows の実際の Downloads フォルダへリンク。既存の実ディレクトリは維持 |
-| VS Code 設定 | Windows の `%APPDATA%\Code\User` に settings.json と keybindings.json を上書きコピー |
-| Flutter | `INSTALL_FLUTTER=1` の指定時だけ導入・更新 |
-
-Windows フォルダは PowerShell から取得し、Windows のユーザー名や Downloads の保存先を決め打ちしない。
-Windows 連携が無効・利用不可の場合やフォルダへアクセスできない場合は、該当の連携設定を省いたことを表示する。
-VS Code 設定は `u` のたびにコピーして反映する。対象は通常版の既定プロファイルで、Insiders・ポータブル版・別プロファイルは対象外。
-WSL 側の Linux 用 VS Code 設定と ChromeOS 用 `.sommelierrc` は配置しない。
-fcitx、Linux 版 VS Code、ChromeOS の MyDrive リンク、Linux アプリの最大化ランチャーも導入・設定しない。
-Chromium が存在する場合だけ `CHROME_EXECUTABLE` を設定する。通常の WSL セットアップでは Chromium を導入しない。
-ホームでの screen 自動起動と作業用タブは従来どおり維持する。
-
-VS Code 本体・WSL 拡張は上記の Windows 側の手順で準備する。
-Codex 本体・gh・gcloud・Docker・Android SDK は一括スクリプトでは導入しない。
-GitHub の SSH 鍵や credential helper、Firebase / gcloud のログイン情報は新環境で別途設定する。
-メモリ・CPU・swap の上限は Windows 側の WSL 設定または `%UserProfile%\.wslconfig` で調整する。一括スクリプトでは変更しない。
-
-参考: [WSL の開発環境](https://learn.microsoft.com/windows/wsl/setup/environment)、
-[VS Code と WSL](https://code.visualstudio.com/docs/remote/wsl)、
-[Windows の VS Code 設定保存先](https://code.visualstudio.com/docs/configure/settings#settings-json-file)、
-[WSL のリソース設定](https://learn.microsoft.com/windows/wsl/wsl-config)。
+WSL 側の開発リポジトリと依存ディレクトリは `/mnt/c` へ置かず、Linux 側の `~/git` を使う。
+Windows / WSL の Node・npm・認証情報は別々に扱う。
+Windows 側の再適用は PowerShell スクリプト、WSL 側の更新・再適用は従来どおり `u`。
 
 ## Flutter（任意）
 
