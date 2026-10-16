@@ -400,6 +400,7 @@ function setNode()
 {
   # Keep the previous LTS policy; do not depend on interactive shell activation.
   mise use --global node@lts
+  mise use --global npm@latest
 }
 
 function setFlutter()
@@ -417,7 +418,7 @@ function setFlutter()
 function setFirebase()
 {
   # https://firebase.google.com/docs/cli
-  mise exec node@lts -- npm install -g firebase-tools
+  mise exec node@lts npm@latest -- npm install -g firebase-tools
 
   # memo
   # firebase login --no-localhost
