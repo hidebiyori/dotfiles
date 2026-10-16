@@ -28,7 +28,7 @@ class InstallerTests(unittest.TestCase):
             "TEST_LOG": str(self.log),
         }
         for name in ("WSL_DISTRO_NAME", "WSL_INTEROP", "INSTALL_FLUTTER", "BASH_ENV",
-                     "UPGRADE_DESKTOP_APPS", "XDG_CACHE_HOME"):
+                     "UPGRADE_DESKTOP_APPS", "XDG_CACHE_HOME", "CODEX_HOME"):
             self.env.pop(name, None)
 
     def command(self, name, contents):
@@ -141,6 +141,7 @@ fi
 
     def prepare_install(self, kernel):
         self.env["TEST_KERNEL"] = kernel
+        self.env["CODEX_HOME"] = str(self.home / ".codex")
         repository = self.home / "git/dotfiles"
         (repository / "bin").mkdir(parents=True)
         shutil.copytree(ROOT / "src", repository / "src")
@@ -157,6 +158,24 @@ fi
             self.command(name, f'echo "Unexpected GUI/download command: {name}" >&2\nexit 99\n')
         self.command("which", 'exit 1\n')
         return repository
+
+    def test_codex_instructions_copy_to_custom_home(self):
+        repository = self.prepare_install("Linux example")
+        target = self.home / "custom codex"
+        self.run_bash("setCodexInstructions; setCodexInstructions", extra_env={"CODEX_HOME": str(target)})
+        self.assertEqual((target / "AGENTS.md").read_bytes(),
+                         (repository / "src/.codex/AGENTS.md").read_bytes())
+        self.assertFalse((target / "AGENTS.md").is_symlink())
+
+    def test_wsl_codex_instructions_discover_windows_home(self):
+        repository = self.prepare_install("Linux Microsoft")
+        target = self.home / "Windows Codex"
+        self.command("powershell.exe", "printf '%s' 'C:/Users/example/.codex'\n")
+        self.command("wslpath", 'printf "%s" "$TEST_CODEX_TARGET"\n')
+        self.run_bash('uname="Linux Microsoft"; setCodexInstructions',
+                      extra_env={"CODEX_HOME": "", "TEST_CODEX_TARGET": str(target)})
+        self.assertEqual((target / "AGENTS.md").read_bytes(),
+                         (repository / "src/.codex/AGENTS.md").read_bytes())
 
     def prepare_windows(self):
         appdata = self.home / "windows 日本語/AppData/Roaming"

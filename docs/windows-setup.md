@@ -160,6 +160,8 @@ WSL 内で開発する場合は、導入後に次を一度設定する。
 統合ターミナルの設定確認は、新しいターミナルを開いて行う。
 
 Windows アプリの Codex 保存先は `%USERPROFILE%\.codex`。
+セットアップは Windows 側の保存先にも共通の `AGENTS.md` をコピーする（既存の指示は置き換える）。
+WSL の `CODEX_HOME` 指定を優先し、未指定なら Windows 側の `CODEX_HOME`、次に `%USERPROFILE%\.codex` を使う。
 WSL 内で別途 Codex CLI を使う場合の既定保存先は `~/.codex` で、設定・認証・履歴は自動共有しない。
 [公式の Windows / WSL 設定](https://learn.chatgpt.com/docs/windows/windows-app#windows-subsystem-for-linux-wsl)を参照。
 
