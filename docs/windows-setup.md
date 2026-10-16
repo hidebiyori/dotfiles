@@ -90,7 +90,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\instal
 - 途中で失敗した場合も、原因を解消して同じコマンドを再実行する。
   先に導入済みとなったアプリを入れ直す必要はない。
 
-WSL 内の apt・Node LTS・Firebase CLI の更新等は引き続き行う。
+WSL 内の apt・Node LTS・npm・Firebase CLI の更新等は引き続き行う。
 バージョンや全ファイルの更新日時を固定するものではなく、
 [共通の再実行方針](../README.md#再実行時の動作)に沿って必要な処理だけを繰り返す。
 再起動や Linux ユーザー作成待ちは終了コード `2` のままとし、完了とは扱わない。
@@ -199,7 +199,7 @@ WSL 内の clone に Git for Windows は不要だが、Windows 版 Codex の一�
 ## 更新とエラー時の扱い
 
 Windows アプリは PowerShell スクリプト、WSL 内の共通設定・開発ツールは `u` で再適用する。
-`u` には従来どおり apt upgrade、Node LTS / Firebase CLI の更新と VS Code 設定の上書きが含まれる。
+`u` には従来どおり apt upgrade、Node LTS / npm / Firebase CLI の更新と VS Code 設定の上書きが含まれる。
 VS Code 設定の内容が同じ場合はコピーを省くが、手動変更した内容はリポジトリの設定で置き換える。
 
 スクリプトの終了コードは、依頼した範囲の完了が `0`、再起動 / ユーザー作成待ちが `2`、エラーが `1`。
