@@ -115,11 +115,30 @@ function setMacDesktopApps()
   done
 }
 
+function verifyDesktopDeb()
+{
+  local debPath="${1:?}" package="${2:?}" architecture="${3:?}" expectedSha256="${4:-}"
+  if [[ "$(dpkg-deb --field "${debPath}" Package)" != "${package}" ||
+        "$(dpkg-deb --field "${debPath}" Architecture)" != "${architecture}" ]]; then
+    echo "${package}: パッケージの名前またはアーキテクチャが異なります。導入を中止します。" >&2
+    return 1
+  fi
+  if [[ -n "${expectedSha256}" ]]; then
+    local actualSha256
+    actualSha256="$(sha256sum < "${debPath}")" || return
+    if [[ "${actualSha256%% *}" != "${expectedSha256}" ]]; then
+      echo "${package}: SHA256 が配布元の値と一致しません。導入を中止します。" >&2
+      return 1
+    fi
+  fi
+}
+
 function installDesktopDeb()
 {
   local package="${1:?}"
   local architecture="${2:?}"
   local packageUrl="${3:?}"
+  local expectedSha256="${4:-}"
   local cacheRoot="${XDG_CACHE_HOME:-${HOME}/.cache}/dotfiles"
   local cachedDeb="${cacheRoot}/${package}_${architecture}.deb"
   local downloadedDeb="${cachedDeb}.part"
@@ -128,18 +147,10 @@ function installDesktopDeb()
     curl --fail --location --proto '=https' --tlsv1.2 \
       --user-agent 'dotfiles-desktop-setup/1.0 (+https://github.com/hidebiyori/dotfiles)' \
       --output "${downloadedDeb}" "${packageUrl}" || return
-    if [[ "$(dpkg-deb --field "${downloadedDeb}" Package)" != "${package}" ||
-          "$(dpkg-deb --field "${downloadedDeb}" Architecture)" != "${architecture}" ]]; then
-      echo "${package}: 取得したパッケージの名前またはアーキテクチャが異なります。導入を中止します。" >&2
-      return 1
-    fi
+    verifyDesktopDeb "${downloadedDeb}" "${package}" "${architecture}" "${expectedSha256}" || return
     mv "${downloadedDeb}" "${cachedDeb}" || return
   fi
-  if [[ "$(dpkg-deb --field "${cachedDeb}" Package)" != "${package}" ||
-        "$(dpkg-deb --field "${cachedDeb}" Architecture)" != "${architecture}" ]]; then
-    echo "${package}: キャッシュのパッケージ情報が一致しません。内容を確認してください。" >&2
-    return 1
-  fi
+  verifyDesktopDeb "${cachedDeb}" "${package}" "${architecture}" "${expectedSha256}" || return
   sudo apt install "${cachedDeb}"
 }
 
@@ -249,7 +260,42 @@ function setVisualStudioCode()
     arm64) platform=arm64 ;;
     *) echo "VS Code: 対応パッケージのないアーキテクチャです。" >&2; return 1 ;;
   esac
-  installDesktopDeb code "${architecture}" "https://update.code.visualstudio.com/latest/linux-deb-${platform}/stable"
+  local cacheRoot="${XDG_CACHE_HOME:-${HOME}/.cache}/dotfiles"
+  local metadata="${cacheRoot}/code_${architecture}.json"
+  local metadataInput="${metadata}"
+  mkdir -p "${cacheRoot}" || return
+  if [[ ! -f "${metadata}" ]]; then
+    metadataInput="${metadata}.part"
+    curl --fail --location --proto '=https' --tlsv1.2 \
+      --user-agent 'dotfiles-desktop-setup/1.0 (+https://github.com/hidebiyori/dotfiles)' \
+      --output "${metadataInput}" "https://update.code.visualstudio.com/api/update/linux-deb-${platform}/stable/latest" || return
+  fi
+  local releaseInfo codeVersion codeSha256
+  releaseInfo="$(python3 - "${metadataInput}" <<'PY'
+import json
+from pathlib import Path
+import re
+import sys
+try:
+    metadata = json.loads(Path(sys.argv[1]).read_text())
+    version = metadata['productVersion']
+    checksum = metadata['sha256hash']
+    if not isinstance(version, str) or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version):
+        raise ValueError('invalid product version')
+    if not isinstance(checksum, str) or not re.fullmatch(r'[a-fA-F0-9]{64}', checksum):
+        raise ValueError('invalid SHA256')
+except (OSError, ValueError, KeyError, AssertionError, TypeError):
+    sys.exit('VS Code: invalid version or SHA256 metadata; no package installed.')
+print(version + '\t' + checksum.lower())
+PY
+)" || return
+  IFS=$'\t' read -r codeVersion codeSha256 <<< "${releaseInfo}"
+  if [[ "${metadataInput}" != "${metadata}" ]]; then
+    mv "${metadataInput}" "${metadata}" || return
+    sleep 1
+  fi
+  installDesktopDeb code "${architecture}" \
+    "https://update.code.visualstudio.com/${codeVersion}/linux-deb-${platform}/stable" "${codeSha256}"
 }
 
 function setLink()

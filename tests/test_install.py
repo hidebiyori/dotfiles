@@ -1,3 +1,4 @@
+import hashlib
 import os
 from pathlib import Path
 import shlex
@@ -242,11 +243,18 @@ main
         self.command("dpkg", f'printf "%s\\n" "{architecture}"\n')
         self.command("sudo", 'printf "%s\\n" "sudo $*" >> "$TEST_LOG"\n')
         self.command("curl", '''printf '%s\\n' "curl $*" >> "$TEST_LOG"
+download_url="${!#}"
 while [[ $# -gt 0 ]]; do
-  if [[ "$1" == --output ]]; then printf 'synthetic deb' > "$2"; fi
+  if [[ "$1" == --output ]]; then
+    if [[ "$download_url" == */api/update/* ]]; then
+      printf '{"productVersion":"1.142.0","sha256hash":"%s"}' "${TEST_CODE_SHA:-@@SHA256@@}" > "$2"
+    else
+      printf 'synthetic deb' > "$2"
+    fi
+  fi
   shift
 done
-''')
+'''.replace('@@SHA256@@', hashlib.sha256(b'synthetic deb').hexdigest()))
         self.command("dpkg-deb", '''case "$*" in
   *chatgpt*Package) echo "${TEST_DEB_PACKAGE:-chatgpt}" ;;
   *code*Package) echo "${TEST_DEB_PACKAGE:-code}" ;;
@@ -348,10 +356,33 @@ if installDesktopDeb chatgpt amd64 https://example.invalid/package.deb; then exi
 function command() { if [[ "$*" == '-v code' ]]; then return 1; fi; builtin command "$@"; }
 setVisualStudioCode
 ''', extra_env={"TEST_DEB_ARCHITECTURE": "arm64"})
-        self.assertIn("https://update.code.visualstudio.com/latest/linux-deb-arm64/stable", self.log.read_text())
+        self.assertIn("https://update.code.visualstudio.com/1.142.0/linux-deb-arm64/stable", self.log.read_text())
         self.log.unlink()
         self.command("code", "exit 0\n")
         self.run_bash('setOptions; setVisualStudioCode')
+        self.assertFalse(self.log.exists())
+
+    def test_vscode_checksum_mismatch_stops_before_install(self):
+        self.desktop_stubs()
+        result = self.run_bash('''setOptions
+function command() { if [[ "$*" == '-v code' ]]; then return 1; fi; builtin command "$@"; }
+if setVisualStudioCode; then exit 99; fi
+''', extra_env={"TEST_CODE_SHA": "0" * 64})
+        self.assertIn("SHA256", result.stderr)
+        self.assertNotIn("sudo apt install", self.log.read_text())
+        self.assertFalse((self.home / ".cache/dotfiles/code_amd64.deb").exists())
+
+    def test_vscode_rechecks_cached_deb_checksum(self):
+        self.desktop_stubs()
+        body = '''setOptions
+function command() { if [[ "$*" == '-v code' ]]; then return 1; fi; builtin command "$@"; }
+setVisualStudioCode
+'''
+        self.run_bash(body)
+        (self.home / ".cache/dotfiles/code_amd64.deb").write_text("corrupted cache")
+        self.log.unlink()
+        result = self.run_bash(body.replace('setVisualStudioCode\n', 'if setVisualStudioCode; then exit 99; fi\n'))
+        self.assertIn("SHA256", result.stderr)
         self.assertFalse(self.log.exists())
 
 
