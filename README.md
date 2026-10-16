@@ -117,12 +117,12 @@ WSL を使う場合は WSL 内で行い、Windows 側の認証とは別に確認
 ```bash
 gh --version
 gh auth login --hostname github.com --git-protocol https --web
-gh auth setup-git
 gh auth status
 ```
 
 表示された URL をブラウザーで開き、案内に従って自分の GitHub アカウントで認証する。
-`gh auth setup-git` は HTTPS の Git 認証に `gh` を使う設定。
+共通 Git 設定は GitHub / Gist の HTTPS 認証に PATH 上の `gh auth git-credential` を使う。
+認証情報は各環境の `gh` が保持し、リポジトリには保存しない。
 SSH の remote を使う場合は別途 SSH 認証が必要。認証済みなら再ログインは不要。
 [GitHub CLI の認証コマンド](https://cli.github.com/manual/gh_auth_login)も参照。
 
