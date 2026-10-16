@@ -4,7 +4,7 @@ hidebiyori の複数端末で、シェル等の共通設定と開発ツールを
 
 - `src/`: Bash・Vim・Git・Codex 等の設定ファイル。ホームディレクトリへシンボリックリンクで配置する。
 - `bin/install.sh`: このリポジトリの取得・更新、設定のリンク、OS 別のセットアップ、
-  デスクトップアプリ・mise・Node（mise）・Firebase 等の導入をまとめて行う。Flutter は任意。
+  デスクトップアプリ・mise・Node / npm（mise）・Firebase 等の導入をまとめて行う。Flutter は任意。
 - `bin/install-windows.ps1`: Windows アプリの導入と WSL の準備、WSL 内の Git 取得・一括セットアップへの入口。
 - 一括セットアップ対象は Mac、Chromebook の Linux 開発環境、Windows 11 の WSL2（Debian / Ubuntu）。
   Linux 分岐は apt を使用し、WSL では ChromeOS 専用処理を省く。
@@ -53,7 +53,7 @@ Homebrew 未導入時の既存処理も配布アーカイブを取得・展開�
 
 初回導入後も、同じコマンドや `u` で何度でも再適用できるようにしている。
 ここでの冪等性は「導入済みのものや同じ設定を再利用する」という意味で、バージョンの固定ではない。
-apt / Homebrew、Node LTS、Firebase CLI 等の更新は再実行時にも行う。
+apt / Homebrew、Node LTS、npm、Firebase CLI 等の更新は再実行時にも行う。
 
 - 同じ設定を指すリンクは作り直さない。設定ディレクトリ全体を手動でリンクしている場合も、
   そのリンクを再利用し、リンク元のファイルを書き換えない。
@@ -234,7 +234,7 @@ bash ~/git/dotfiles/bin/setup-skill-python.sh
 既存の `bin/install.sh` / `u` で mise も一括導入する。
 Mac は Homebrew、Chromebook / Debian・Ubuntu / WSL は extrepo と apt を使う。
 PATH 上または `~/.local/bin/mise` に導入済みなら追加インストールを省く。
-既存どおり OS のパッケージ更新や Node・Firebase の導入も行う。Flutter は明示指定した場合のみ導入・更新する。
+既存どおり OS のパッケージ更新や Node / npm・Firebase の導入も行う。Flutter は明示指定した場合のみ導入・更新する。
 WSL では Windows 用の連携処理を選び、Chromebook 固有のリンク作成や GUI ツールの導入を省く。
 Windows ネイティブは一括スクリプトの対象外で、下記の Git Bash 手順を使う。
 
@@ -312,19 +312,23 @@ mise --version
 mise doctor
 ```
 
-### Node を nvm から mise に移行する
+### Node / npm を mise で管理する
 
-一括スクリプトは nvm を取得せず、次で Node の LTS を共通の既定値として設定する。
-Firebase CLI は mise の Node を明示してインストールするので、
-非対話シェルや実行元プロジェクトの Node 設定に依存しない。
+一括スクリプトは nvm を取得せず、次で Node の LTS と npm の最新安定版を共通の既定値として設定する。
+npm は独立したツールとして mise で管理し、Node 付属版より優先する。
+Firebase CLI は mise の Node と npm を明示してインストールするので、
+非対話シェルや実行元プロジェクトの Node / npm 設定に依存しない。
 
 ```bash
 mise use --global node@lts
-mise exec node@lts -- npm install -g firebase-tools
+mise use --global npm@latest
+mise exec node@lts npm@latest -- npm install -g firebase-tools
 ```
 
-この部分だけを実行すれば、OS 全体や Flutter を更新せずに Node を移行できる。
-LTS は固定バージョンではなく、一括スクリプトの再実行時には新しい LTS に更新され得る。
+この部分だけを実行すれば、OS 全体や Flutter を更新せずに Node / npm を移行できる。
+すでに Node を mise で管理している端末では、2 行目だけで npm を追加できる。
+`lts` / `latest` は固定バージョンではなく、一括スクリプトの再実行時には
+新しい Node LTS と npm の最新安定版へ更新され得る。
 
 `.bash_profile` の nvm 初期化は削除済み。既に開いているシェルには nvm の関数や
 PATH が残るため、端末アプリを終了して開き直す（`r` だけでは残る）。
@@ -336,6 +340,7 @@ command -v node
 node --version
 npm --version
 mise which node
+mise which npm
 firebase --version
 ```
 
@@ -359,4 +364,5 @@ node --version
 更新は導入元の apt / Homebrew / winget で行い、別方式で重複インストールしない。
 
 参考: [mise の公式インストール手順](https://mise.jdx.dev/installing-mise.html)、
-[シェルの有効化](https://mise.jdx.dev/cli/activate.html)。
+[シェルの有効化](https://mise.jdx.dev/cli/activate.html)、
+[npm のバージョン管理](https://mise.jdx.dev/lang/node.html#pin-the-npm-version)。
