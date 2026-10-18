@@ -16,7 +16,10 @@ jobs:
         with:
           persist-credentials: false
       - name: Shell syntax
-        run: bash -n bin/install.sh bin/setup-skill-python.sh
+        run: |
+          for file in bin/install.sh bin/setup-skill-python.sh src/.bash_profile src/.bashrc src/bin/wsl-browser; do
+            bash -n "$file" || exit
+          done
       - name: Python tests with stubbed installers
         run: python3 -B -m unittest discover -s tests -v
 

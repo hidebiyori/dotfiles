@@ -10,7 +10,9 @@
 - 検証のために一括セットアップを実行しない。外部コマンドをスタブ化した既存テストを使う。
 
 ```bash
-bash -n bin/install.sh bin/setup-skill-python.sh src/.bash_profile src/.bashrc src/bin/wsl-browser
+for file in bin/install.sh bin/setup-skill-python.sh src/.bash_profile src/.bashrc src/bin/wsl-browser; do
+  bash -n "$file" || exit
+done
 python3 -B -m unittest discover -s tests -v
 git diff --check
 ```
