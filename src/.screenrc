@@ -24,20 +24,15 @@ hardstatus alwayslastline "%-w%50L>%{= w}%n %t%{-}%+w%-60< %= ${USER}@%H[%l][%Y/
 
 # open screen tabs and execute commands
 screen -t vim 0
-screen -t ap1 1
-screen -t ap2 2
-screen -t dot 3
-screen -t var 4
-screen -t tmp 5
+screen -t dot 1
+screen -t var 2
+screen -t tmp 3
 select 0
 stuff "v\015"
 select 1
-stuff "cd ${AP1_ROOT}\015"
-select 2
-stuff "cd ${AP2_ROOT}\015"
-select 3
 stuff "cd ${DOT_ROOT}\015"
-select 4
-stuff "cd ${HOME}/var\015"
-select 0
 select 2
+stuff "cd ${HOME}/var\015"
+select 3
+stuff "cd ${HOME}/tmp\015"
+select 0
