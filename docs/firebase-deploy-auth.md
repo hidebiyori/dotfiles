@@ -1,8 +1,10 @@
-# Firebase 公開認証を既存の設定から調べる
+# Firebase / GitHub Actions の公開認証
 
 GitHub Actions の Firebase Hosting 公開を設定する際の共通手順。
 Secret が見つからない場合も、認証に使える設定と権限を確認してから、
 不足している操作を判断する。認証情報の値は文書・チャット・ログへ残さない。
+この汎用手順は共通 `AGENTS.md` から参照する。実際のプロジェクト ID・Hosting target・
+認証方式・workflow は対象プロジェクト内で管理する。
 
 ## 既存設定を確認する
 
@@ -41,11 +43,6 @@ CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE="$HOME/.config/gcloud/application_default
 失敗時は認証失敗と権限不足を区別し、実行結果に応じて必要なログインや権限を伝える。
 ADC の JSON、refresh token、access token、秘密鍵は表示しない。
 
-2026-10-12 の調査では、通常の gcloud アクティブアカウントがない環境で、
-既存 ADC の override によるプロジェクト読み取りと IAM・Service Account Credentials・
-Security Token Service API の有効化を確認した。この観測は、別端末や別プロジェクトの
-権限を保証するものではない。
-
 ## GitHub Actions からの公開
 
 新しい設定は Google WIF と GitHub OIDC を優先し、長期サービスアカウント鍵を作らない。
@@ -79,10 +76,6 @@ provider condition のテンプレート（数値 ID を確認して置き換え
 ```text
 assertion.repository_id=='REPOSITORY_NUMERIC_ID' && assertion.repository_owner_id=='OWNER_NUMERIC_ID' && assertion.ref=='refs/heads/main' && assertion.event_name=='push'
 ```
-
-2026-10-12 の調査では、既存 ADC で専用サービスアカウントと WIF pool/provider を作成し、
-上記の制限・ロールを設定できた。サービスアカウント鍵は作成せず、GitHub Secret も不要だった。
-これは設定作成の確認であり、Actions での認証とデプロイは実際の実行結果で別に検証する。
 
 共有 Firebase プロジェクトでは、例えば `firebase deploy --only hosting:TARGET --project PROJECT_ID`
 のように Hosting target を絞る。リポジトリに公開用スクリプトがあれば、その検証済みコマンドを使う。

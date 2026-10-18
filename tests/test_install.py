@@ -203,9 +203,8 @@ esac
         calls = self.log.read_text()
         self.assertIn("sudo apt install -y python3-venv", calls)
         self.assertIn("skill-python", calls)
-        self.assertIn("mise use --global node@lts", calls)
-        self.assertIn("mise use --global npm@latest", calls)
-        self.assertIn("mise exec node@lts npm@latest -- npm install -g firebase-tools", calls)
+        self.assertIn(f"mise install --cd {self.home} --jobs 1 node npm", calls)
+        self.assertIn(f"mise exec --cd {self.home} -- npm install -g firebase-tools", calls)
         self.assertNotIn("flutter", calls)
 
     def test_wsl_detection_uses_environment_and_kernel_without_affecting_other_platforms(self):
@@ -248,7 +247,8 @@ esac
             self.assertEqual((code_user / filename).read_bytes(),
                              (repository / "src/.config/Code/User" / filename).read_bytes())
             self.assertFalse((code_user / filename).is_symlink())
-        for filename in (".bashrc", ".bash_profile", ".screenrc", ".ssh/config"):
+        for filename in (".bashrc", ".bash_profile", ".screenrc", ".ssh/config",
+                         ".config/mise/config.toml"):
             self.assertEqual((self.home / filename).resolve(), repository / "src" / filename)
 
     def test_wsl_windows_failure_still_finishes_cli_setup(self):
@@ -279,10 +279,18 @@ esac
             self.assertEqual(destination.lstat().st_ino, inode)
 
     def test_wsl_main_repeatedly_preserves_identical_links_and_copies(self):
-        self.prepare_install("Linux example microsoft-standard-WSL2")
+        repository = self.prepare_install("Linux example microsoft-standard-WSL2")
         appdata, _ = self.prepare_windows()
+        mise_config = self.home / ".config/mise/config.toml"
+        mise_config.parent.mkdir(parents=True)
+        mise_config.write_text('[tools]\nnode = "22"\n')
+        source_config = repository / "src/.config/mise/config.toml"
+        original_config = source_config.read_bytes()
         self.run_bash("main")
-        destinations = [self.home / name for name in (".bashrc", ".codex/AGENTS.md", "Downloads")]
+        self.assertTrue(mise_config.is_symlink())
+        self.assertEqual(mise_config.resolve(), source_config)
+        destinations = [self.home / name for name in (
+            ".bashrc", ".codex/AGENTS.md", ".config/mise/config.toml", "Downloads")]
         destinations += [appdata / "Code/User" / name for name in ("settings.json", "keybindings.json")]
         for path in destinations:
             os.utime(path, ns=(1_000_000_000, 1_000_000_000), follow_symlinks=False)
@@ -290,6 +298,7 @@ esac
         for _ in range(2):
             self.run_bash("main")
         self.assertEqual(before, [(path.lstat().st_ino, path.lstat().st_mtime_ns) for path in destinations])
+        self.assertEqual(source_config.read_bytes(), original_config)
 
     def test_windows_settings_that_already_reference_source_are_preserved(self):
         repository = self.prepare_install("Linux example microsoft-standard-WSL2")
@@ -376,8 +385,8 @@ main
 ''')
         calls = self.log.read_text()
         for expected in ("brew update", "brew upgrade", "brew list --versions gh", "defaults write com.apple.screencapture", "skill-python",
-                         "mise use --global node@lts", "mise use --global npm@latest",
-                         "mise exec node@lts npm@latest -- npm install -g firebase-tools"):
+                         f"mise install --cd {self.home} --jobs 1 node npm",
+                         f"mise exec --cd {self.home} -- npm install -g firebase-tools"):
             self.assertIn(expected, calls)
         self.assertNotIn("sudo", calls)
         self.assertNotIn("linux-launcher", calls)

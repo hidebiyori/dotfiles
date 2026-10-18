@@ -1,9 +1,6 @@
 # Chromebook の Chrome を Playwright MCP で接続する
 
-Linux 開発環境から ChromeOS 側の Chrome を使うときの代替手順。
-2026-10-09 にウェブ目録と Pluto のチャットで接続を確認した。
-Playwright MCP の拡張接続方式を使い、導入済みツールだけで準備する。
-他の OS や別バージョンの MCP で同じ動作になることは未確認。
+Linux 開発環境から ChromeOS 側の Chrome へ、導入済みの Playwright MCP と拡張機能で接続する手順。
 
 ## 通常は自動起動を無効にする
 
@@ -24,9 +21,7 @@ enabled = false
 設定の反映状況は新しいセッションで確認し、進行中のチャットを中断したり、
 反映のためにアプリを再起動したりしない。
 
-原因不明のエラー、JavaScript の実行時エラー、ブラウザ固有の問題、
-UI の表示・操作不具合など、共通 `AGENTS.md` の例外に該当する検証では使用してよい。
-通常の内容確認には、まず `curl` などを使う。
+利用条件と他チャットの接続を保護する規則は共通 `AGENTS.md` に従う。
 
 ## 適用する状況
 
@@ -49,11 +44,9 @@ Linux 側の Chrome のプロファイルを調べたエラーだけでは、Chr
 設定全体や環境変数の値を出力せず、必要な実行パスだけを確認する。
 未導入の場合はこの手順だけでは接続できない。自動でインストールしない。
 
-この端末で確認したパスは次のとおり。Node の更新や MCP の配置変更時には実環境に合わせる。
-
-- Node: `/home/hidebiyori/.local/share/mise/installs/node/24.21.0/bin/node`
-- MCP CLI: `/home/hidebiyori/.local/share/playwright-mcp/node_modules/@playwright/mcp/cli.js`
-- Chrome 拡張 ID: `mmlmfjhmonkocbjadbfplnigmagldckm`
+Node の場所は `mise which node` で確認する。以下は MCP CLI が
+`~/.local/share/playwright-mcp/node_modules/@playwright/mcp/cli.js` にある場合の例。
+配置が異なる場合は、既存設定の実行パスに合わせて `pwCli` を変更する。
 
 ## 2. Node REPL でチャット専用のクライアントを起動する
 
@@ -68,8 +61,8 @@ URL 中の中継先ホストを `127.0.0.1` にそろえ、ChromeOS 側の Chrom
 ```javascript
 var pwFs = await import('node:fs/promises');
 var pwCp = await import('node:child_process');
-var pwNode = '/home/hidebiyori/.local/share/mise/installs/node/24.21.0/bin/node';
-var pwCli = '/home/hidebiyori/.local/share/playwright-mcp/node_modules/@playwright/mcp/cli.js';
+var pwNode = (await (await import('node:util')).promisify(pwCp.execFile)('mise', ['which', 'node'])).stdout.trim();
+var pwCli = nodeRepl.homeDir + '/.local/share/playwright-mcp/node_modules/@playwright/mcp/cli.js';
 var pwDirectory = await pwFs.mkdtemp(nodeRepl.homeDir + '/.codex/playwright-connect-');
 await pwFs.chmod(pwDirectory, 0o700);
 await pwFs.writeFile(pwDirectory + '/open-connection.mjs', `#!${pwNode}
@@ -191,8 +184,5 @@ if (pwHasExited) await pwFs.rm(pwDirectory, { recursive: true, force: true });
 上のコードは、終了を確認した場合にこのディレクトリを削除する。
 MCP が `.playwright-mcp/` にログを生成する場合があるが、コミット対象には含めない。
 
-共通指示は `src/.codex/AGENTS.md` にあり、`~/.codex/AGENTS.md` のリンクから
-新しいチャットへ読み込まれる。現在進行中の別チャットにこの変更が自動で伝わるとは限らない。
-
 参考: [OpenAI の MCP 接続ドキュメント](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)。
-上の接続 URL を保存する方法は、この端末で確認したローカルの代替手順。
+接続 URL の保存は、ブラウザーを自動起動せず利用者が接続先を選ぶために行う。

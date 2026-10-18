@@ -29,60 +29,19 @@ else
 fi
 
 export GIT_ROOT="${HOME}/git"
-export AP1_ROOT="${GIT_ROOT}/app01-flutter"
-export AP2_ROOT="${GIT_ROOT}/app02-nextjs"
 export DOT_ROOT="${GIT_ROOT}/dotfiles"
-export DOC_MAIN="${HOME}/var/0001-data/0001-hide/0001-soon"
 alias r="source ${HOME}/.bash_profile"
 alias u="${GIT_ROOT}/dotfiles/bin/install.sh && r"
 alias o="if [[ ! x${TERM} =~ xscreen ]]; then screen -U -D -R; fi"
-alias a="cd ${AP1_ROOT}"
 alias s="cd ${GIT_ROOT}/dotfiles"
 alias d="cd ${GIT_ROOT}"
-alias f="cd ${DOC_MAIN}"
 alias h="history | tail -n 50"
 alias l="ls -Al"
 alias ll="l"
 alias lt="ls -Altr"
 alias vim="vim -vfp"
-alias v="\
-  vim \
-  ${DOC_MAIN}/001-memo.txt \
-  ${DOT_ROOT}/bin/install.sh \
-  -c '2tabnext' \
-  -c 'vsplit ${HOME}/.bash_profile' \
-  -c 'split ${HOME}/.bashrc' \
-  -c 'wincmd l' \
-  -c 'split ${HOME}/.vimrc' \
-  -c 'wincmd h' \
-  -c 'tabfirst' \
-  -c 'cd ${AP1_ROOT}' \
-"
+alias v="vim -p ${DOT_ROOT}/bin/install.sh ${HOME}/.bash_profile ${HOME}/.bashrc ${HOME}/.vimrc"
 alias b="vim -S ${HOME}/.vim/session"
-alias n="updateFlutter; updateFirebaseFunctions"
-
-function updateFlutter()
-{
-  pushd "${AP1_ROOT}"
-  flutter upgrade
-  flutter pub outdated
-  flutter pub upgrade --major-versions
-  version=$(cat ${FLUTTER_DIR}/version)
-  perl -i -ple "s/(flutter-version: )'.+'/\1'${version}'/g" .github/workflows/*
-  git ci -m 'update flutter' pubspec.lock .github
-  popd
-}
-export -f updateFlutter
-
-function updateFirebaseFunctions()
-{
-  pushd "${AP1_ROOT}/functions"
-  npx -p npm-check-updates -c 'ncu -u'
-  npm install
-  git ci -m 'update firebase functions' package.json package-lock.json
-  popd
-}
-export -f updateFirebaseFunctions
 
 uname="$(uname -a)"
 
