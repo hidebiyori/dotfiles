@@ -39,7 +39,7 @@ function Test-Case {
         foreach ($functionName in @($script:OriginalFunctions.Keys)) {
             $original = $script:OriginalFunctions[$functionName]
             if ($null -eq $original) {
-                Remove-Item -Path ("Function:script:{0}" -f $functionName)
+                Remove-Item -Path ("Function:{0}" -f $functionName)
             } else {
                 Set-Item -Path ("Function:script:{0}" -f $functionName) -Value $original
             }
@@ -496,4 +496,6 @@ Test-Case 'Existing VS Code WSL extension is not reinstalled' {
     Assert-True (($script:Calls -join ',') -eq '--list-extensions') 'Unexpected extension reinstall.'
 }
 
-Write-Host ("{0} Windows bootstrap tests passed." -f $script:Passed)
+. (Join-Path $PSScriptRoot 'test_windows_keyboard.ps1')
+
+Write-Host ("{0} Windows tests passed." -f $script:Passed)
