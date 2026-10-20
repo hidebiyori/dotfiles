@@ -22,20 +22,14 @@ function ConvertTo-KeyboardMapBytes {
 
 function ConvertTo-KeyboardState {
     param($State)
-    foreach ($name in @('ScancodeMap', 'PrintScreenSnipping')) {
-        if ($null -eq $State -or -not $State.PSObject.Properties[$name]) { throw 'Invalid keyboard state.' }
-    }
+    if ($null -eq $State -or -not $State.PSObject.Properties['ScancodeMap']) { throw 'Invalid keyboard state.' }
     $map = $State.ScancodeMap
     if ($null -ne $map) {
         if ($map -isnot [string]) { throw 'Invalid Scancode Map value.' }
         ConvertTo-KeyboardMapBytes -Hex $map | Out-Null
         $map = $map.ToUpperInvariant()
     }
-    $snipping = $State.PrintScreenSnipping
-    if ($null -ne $snipping -and (($snipping -isnot [int] -and $snipping -isnot [long]) -or $snipping -notin @(0, 1))) {
-        throw 'Invalid Print Screen snipping value.'
-    }
-    [pscustomobject]@{ ScancodeMap = $map; PrintScreenSnipping = $snipping }
+    [pscustomobject]@{ ScancodeMap = $map }
 }
 
 function Get-WindowsKeyboardProfile {
@@ -47,37 +41,27 @@ function Get-WindowsKeyboardProfile {
 
 function Get-WindowsKeyboardState {
     $layout = Get-ItemProperty -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\Keyboard Layout'
-    $keyboard = Get-ItemProperty -LiteralPath 'HKCU:\Control Panel\Keyboard'
     $map = $layout.PSObject.Properties['Scancode Map']
-    $snipping = $keyboard.PSObject.Properties['PrintScreenKeyForSnippingEnabled']
     if ($map -and $map.Value -isnot [byte[]]) { throw 'Scancode Map is not a REG_BINARY value.' }
-    if ($snipping -and $snipping.Value -isnot [int]) { throw 'Print Screen snipping is not a REG_DWORD value.' }
     ConvertTo-KeyboardState ([pscustomobject]@{
         ScancodeMap = $(if ($map) { [BitConverter]::ToString($map.Value).Replace('-', '') } else { $null })
-        PrintScreenSnipping = $(if ($snipping) { $snipping.Value } else { $null })
     })
 }
 
 function Test-KeyboardStateEqual {
     param($Left, $Right)
-    $Left.ScancodeMap -eq $Right.ScancodeMap -and $Left.PrintScreenSnipping -eq $Right.PrintScreenSnipping
+    $Left.ScancodeMap -eq $Right.ScancodeMap
 }
 
 function Set-WindowsKeyboardState {
     param($Before, $After)
-    $entries = @(
-        @{ Field = 'ScancodeMap'; Path = 'HKLM:\SYSTEM\CurrentControlSet\Control\Keyboard Layout'; Name = 'Scancode Map'; Type = 'Binary' }
-        @{ Field = 'PrintScreenSnipping'; Path = 'HKCU:\Control Panel\Keyboard'; Name = 'PrintScreenKeyForSnippingEnabled'; Type = 'DWord' }
-    )
-    foreach ($entry in $entries) {
-        $value = $After.($entry.Field)
-        if ($Before.($entry.Field) -eq $value) { continue }
-        if ($null -eq $value) {
-            Remove-ItemProperty -LiteralPath $entry.Path -Name $entry.Name
-        } else {
-            if ($entry.Type -eq 'Binary') { $value = ConvertTo-KeyboardMapBytes -Hex $value }
-            New-ItemProperty -LiteralPath $entry.Path -Name $entry.Name -PropertyType $entry.Type -Value $value -Force | Out-Null
-        }
+    if ($Before.ScancodeMap -eq $After.ScancodeMap) { return }
+    $path = 'HKLM:\SYSTEM\CurrentControlSet\Control\Keyboard Layout'
+    if ($null -eq $After.ScancodeMap) {
+        Remove-ItemProperty -LiteralPath $path -Name 'Scancode Map'
+    } else {
+        $bytes = ConvertTo-KeyboardMapBytes -Hex $After.ScancodeMap
+        New-ItemProperty -LiteralPath $path -Name 'Scancode Map' -PropertyType Binary -Value $bytes -Force | Out-Null
     }
 }
 
@@ -131,13 +115,11 @@ function Invoke-WindowsKeyboardSetup {
     }
     $current = Get-WindowsKeyboardState
     if ($Restore) {
-        foreach ($name in @('ScancodeMap', 'PrintScreenSnipping')) {
-            if (@($backup.Before.$name, $backup.Applied.$name) -notcontains $current.$name) {
-                throw 'Keyboard settings changed outside this script; no restore attempted. Backup kept.'
-            }
+        if (@($backup.Before.ScancodeMap, $backup.Applied.ScancodeMap) -notcontains $current.ScancodeMap) {
+            throw 'Keyboard settings changed outside this script; no restore attempted. Backup kept.'
         }
         $target = $backup.Before
-        $action = 'Restore the original Scancode Map and Print Screen settings'
+        $action = 'Restore the original Scancode Map'
     } else {
         $target = Get-WindowsKeyboardProfile
         if ($null -ne $backup -and -not (Test-KeyboardStateEqual $backup.Applied $target)) {
@@ -150,7 +132,7 @@ function Invoke-WindowsKeyboardSetup {
             Write-Host 'The requested keyboard registry settings are already saved. A restart may still be pending.'
             return
         }
-        $action = 'Map left Windows to left Alt and enable Print Screen snipping'
+        $action = 'Map left Windows to left Alt'
     }
     if (-not $PSCmdlet.ShouldProcess('Windows keyboard registry settings', $action)) { return }
     Assert-WindowsKeyboardAdministrator

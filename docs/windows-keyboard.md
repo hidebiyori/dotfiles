@@ -12,7 +12,6 @@
 | 左 Win + Tab | Alt + Tab と同じウィンドウ切り替え。左 Win を押したまま Tab で選び、離して確定 |
 | 左 Win + Shift + Tab | ウィンドウを逆順に選択 |
 | 左 Win 単独 | 左 Alt として動作 |
-| PrtSc / Print Screen | Snipping Tool でスクリーンショットの範囲を選択 |
 
 左 Win の変更は、Windows の
 [`Scancode Map`](https://learn.microsoft.com/en-us/previous-versions/windows/hardware/hid/keyboard-and-mouse-class-drivers#scan-code-mapper-for-keyboards)
@@ -20,10 +19,7 @@
 設定は端末の全ユーザー・接続された全キーボードに適用され、反映・解除には Windows の再起動が必要。
 右 Win キーがある場合は、右側から通常の Win ショートカットを使える。
 
-Print Screen の画面切り取り設定は、実行した Windows ユーザーにだけ適用する。
-手動で変更する場合は「設定 → アクセシビリティ → キーボード → Print Screen キーを使用して画面キャプチャを開く」を使う。
-キーボードによっては PrtSc と Fn の併用が必要。
-PrtSc を使えない場合は、[Snipping Tool をタスクバーにピン留め](https://support.microsoft.com/ja-jp/windows/apps/use-snipping-tool-to-capture-screenshots)して起動できる。
+PrtSc / Print Screen は Windows の既存の動作を利用し、設定を変更しない。
 
 ## 適用と解除
 
@@ -37,7 +33,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$repo\bin\setup-windows
 
 `-WhatIf` は管理者権限なしで確認でき、設定やバックアップを書き込まない。
 適用時だけ、**同じ Windows アカウントで管理者として PowerShell を開き**、パスを再設定して実行する。
-別の管理者アカウントを使うと、Print Screen の設定とバックアップの所有者が変わる。
+別の管理者アカウントを使うと、バックアップの保存先が変わる。
 
 ```powershell
 $repo = '\\wsl$\Ubuntu\home\<Linuxユーザー名>\git\dotfiles'
@@ -45,11 +41,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$repo\bin\setup-windows
 ```
 
 成功後、作業中のファイルを保存して Windows を手動で再起動する。
-スクリプトは自動で再起動しない。再起動後はウィンドウの順送り・逆送り・キーを離したときの確定と、PrtSc の範囲選択を確認する。
+スクリプトは自動で再起動しない。再起動後はウィンドウの順送り・逆送り・キーを離したときの確定を確認する。
 
-初回の変更前に `%LOCALAPPDATA%\dotfiles\windows-keyboard.backup.json` へ元の設定を保存する。
+初回の変更前に `%LOCALAPPDATA%\dotfiles\windows-keyboard.backup.json` へ元の Scancode Map を保存する。
 再実行ではこのバックアップを置き換えず、同じ設定への書き込みを省く。
-既存の異なる Scancode Map がある場合は、どちらの設定も変更せず停止する。
+既存の異なる Scancode Map がある場合は、設定を変更せず停止する。
 途中で失敗した場合もバックアップを残すので、原因を解消して再実行するか解除する。
 
 解除は、適用した Windows アカウントの管理者 PowerShell から実行する。
@@ -59,6 +55,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$repo\bin\setup-windows
 ```
 
 元の設定値、または元々値がなかった状態へ戻して確認した後、バックアップを削除する。
+バックアップに他の設定値が含まれていても、復元対象は Scancode Map だけとする。
 解除後も手動で再起動する。適用後に他のツールで変更された値がある場合は、上書きせず停止する。
 バックアップは Git 管理に加えない。共通プロファイルを変更するときは、先に既存の設定を解除する。
 
