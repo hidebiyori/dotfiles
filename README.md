@@ -27,6 +27,7 @@ Mac、Chromebook の Linux 開発環境、Windows 11 / WSL2 で使う共通設�
 通常の PowerShell から [Windows セットアップ手順](docs/windows-setup.md#初回に実行すること)を使う。
 Windows アプリ、WSL2、WSL 内の clone とセットアップを順に準備する。
 Git for Windows や Windows 側での手動 clone は事前準備に不要。
+Steam は [`-IncludeSteam` を指定した場合だけ](docs/desktop-apps.md#steam任意)追加できる。
 
 ### Mac / Chromebook / 準備済みの WSL2
 

@@ -4,7 +4,8 @@ param(
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$')]
     [string]$Distribution = 'Ubuntu',
     [switch]$AppsOnly,
-    [switch]$UpgradeApps
+    [switch]$UpgradeApps,
+    [switch]$IncludeSteam
 )
 
 # Keep this entry point self-contained: a new PC does not need Git for Windows.
@@ -13,11 +14,15 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
 function Get-ManagedWindowsApps {
+    param([switch]$IncludeSteam)
     @(
         [pscustomobject]@{ Name = 'Codex / ChatGPT desktop'; Id = '9PLM9XGG6VKS'; Source = 'msstore' }
         [pscustomobject]@{ Name = 'Google Chrome'; Id = 'Google.Chrome'; Source = 'winget' }
         [pscustomobject]@{ Name = 'Visual Studio Code'; Id = 'Microsoft.VisualStudioCode'; Source = 'winget' }
         [pscustomobject]@{ Name = 'GitHub CLI'; Id = 'GitHub.cli'; Source = 'winget' }
+        if ($IncludeSteam) {
+            [pscustomobject]@{ Name = 'Steam'; Id = 'Valve.Steam'; Source = 'winget' }
+        }
     )
 }
 
@@ -51,8 +56,8 @@ function Invoke-WingetNative {
 }
 
 function Install-WindowsApps {
-    param([switch]$Upgrade)
-    foreach ($app in (Get-ManagedWindowsApps)) {
+    param([switch]$Upgrade, [switch]$IncludeSteam)
+    foreach ($app in (Get-ManagedWindowsApps -IncludeSteam:$IncludeSteam)) {
         Write-Host ("Checking {0} ({1})" -f $app.Name, $app.Id)
         $selection = @('--id', $app.Id, '--exact', '--source', $app.Source)
         $queryArguments = @('list') + $selection + @('--accept-source-agreements', '--disable-interactivity')
@@ -284,9 +289,9 @@ function Initialize-Wsl {
 }
 
 function Invoke-WindowsSetup {
-    param([string]$Name, [switch]$OnlyApps, [switch]$Upgrade)
+    param([string]$Name, [switch]$OnlyApps, [switch]$Upgrade, [switch]$IncludeSteam)
     Assert-WindowsHost -OnlyApps:$OnlyApps
-    Install-WindowsApps -Upgrade:$Upgrade
+    Install-WindowsApps -Upgrade:$Upgrade -IncludeSteam:$IncludeSteam
     Install-WslExtension
     if ($OnlyApps) { return $true }
     Initialize-Wsl -Name $Name
@@ -294,7 +299,7 @@ function Invoke-WindowsSetup {
 
 if ($MyInvocation.InvocationName -ne '.') {
     try {
-        $ready = Invoke-WindowsSetup -Name $Distribution -OnlyApps:$AppsOnly -Upgrade:$UpgradeApps
+        $ready = Invoke-WindowsSetup -Name $Distribution -OnlyApps:$AppsOnly -Upgrade:$UpgradeApps -IncludeSteam:$IncludeSteam
         if (-not $ready) {
             Write-Host 'Setup is not complete yet. Follow the instructions above, then rerun the same command.'
             exit 2

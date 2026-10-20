@@ -25,6 +25,35 @@ Store の ID を含め、製品名から導入 ID を推測しない。
 「導入済み・更新不要」の既知の終了コードは、同じ ID / source の再確認に成功した場合だけ許容する。
 通信・ハッシュ検証・状態確認の失敗は停止する。
 
+### Steam（任意）
+
+Windows 版 Steam は `-IncludeSteam` を指定したときだけ、winget の `Valve.Steam` を対象に加える。
+既定では導入・更新・状態確認を行わない。導入元は [Microsoft のパッケージ定義](https://github.com/microsoft/winget-pkgs/tree/master/manifests/v/Valve/Steam)で確認できる。
+通常の PowerShell で、準備したスクリプトに指定する。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\install-windows.ps1" -AppsOnly -IncludeSteam
+```
+
+通常の対象アプリと WSL 拡張の不足分も導入する。WSL のセットアップも行う場合は `-AppsOnly` を外す。
+導入済みの Steam は再インストールしない。winget で更新する場合は、同じコマンドに `-UpgradeApps` も加える。
+`-IncludeSteam` を省いた再実行でも、Steam の削除は行わない。
+
+Steam だけを追加する場合は、一括セットアップを実行せず次を使う。
+
+```powershell
+winget install --id Valve.Steam --exact --source winget --accept-source-agreements --accept-package-agreements --disable-interactivity --silent --no-upgrade
+```
+
+必要に応じて Windows の管理者承認に応答する。導入後は次で登録を確認する。
+
+```powershell
+winget list --id Valve.Steam --exact --source winget
+```
+
+スタートメニューから Steam を開き、初回のクライアント更新とサインインを行う。
+ゲームのインストールは Steam 内で選択する。クライアント更新やゲームの取得には追加の通信が発生する。
+
 ## Mac
 
 `bin/install.sh` の `setMacDesktopApps` が対象 cask を管理する。
