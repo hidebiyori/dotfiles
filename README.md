@@ -51,7 +51,7 @@ Linux のパッケージ管理は apt を使い、WSL では Windows 側の GUI 
 ## 更新と再実行
 
 - `u` はリポジトリの fast-forward 更新、設定の再適用、OS パッケージと開発ツールの更新を行う。
-  Node / npm の指定は [mise の共通設定](src/.config/mise/config.toml)で管理し、固定バージョンにはしない。
+  Node / npm / Firebase CLI は [mise の共通設定](src/.config/mise/config.toml)で管理する。
 - 同じ設定リンク・コピー・導入済みアプリを再利用する。Downloads / MyDrive の実ディレクトリは維持する。
   Windows / Mac の対象アプリを明示更新する方法は[アプリ管理](docs/desktop-apps.md)を参照する。
 - 通信・権限・検証の失敗時は停止する。原因を解消して再実行する。途中の反映は自動で巻き戻さない。
@@ -64,7 +64,7 @@ Linux のパッケージ管理は apt を使い、WSL では Windows 側の GUI 
 | 文書 | 内容 |
 | --- | --- |
 | [Windows / WSL2](docs/windows-setup.md) | 初回導入、オプション、Codex の WSL 設定、エラー時の扱い |
-| [開発ツール](docs/development-tools.md) | mise / Node / npm、GitHub 初回認証、Flutter、スキル用 Python |
+| [開発ツール](docs/development-tools.md) | 手動リンクを使う設定、mise / CLI、GitHub 初回認証、Flutter、スキル用 Python |
 | [デスクトップアプリ](docs/desktop-apps.md) | OS 別の導入・更新、Chromebook の最大化起動 |
 | [Codex の共通指示とスキル](docs/codex.md) | AGENTS.md の管理場所・同期、共通とプロジェクト固有の分担 |
 | [Firebase 公開認証](docs/firebase-deploy-auth.md) | 既存認証の確認、ADC、GitHub OIDC / WIF |

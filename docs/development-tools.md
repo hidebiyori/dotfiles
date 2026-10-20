@@ -1,14 +1,22 @@
 # 開発ツール
 
-## mise / Node / npm
+## 手動配置のリンクとシェル設定
+
+`.bashrc` の `AP1_ROOT`・`AP2_ROOT`・`DOC_MAIN` と関連エイリアス、Vim の配置、
+`.screenrc` のタブ番号・起動コマンドは、手動で配置したシンボリックリンクや作業場所を参照する前提で使う。
+参照先の取得・作成は利用者が行う。dotfiles の整理・公開情報の見直し・ツール管理の変更だけを理由に、
+これらのパスや関連設定を変更・削除・改名しない。変更するのは利用者が明示的に指定した場合に限る。
+
+## mise / Node / npm / Firebase CLI
 
 グローバル設定は [`src/.config/mise/config.toml`](../src/.config/mise/config.toml) で管理し、
 セットアップで `~/.config/mise/config.toml` へリンクする。
-共通の既定値は Node の `lts` と npm の `latest`。npm は独立したツールとして管理する。
+共通の既定値は Node の `lts`、npm と `npm:firebase-tools` の `latest`。
+npm と Firebase CLI はそれぞれ独立したツールとして管理する。
 バージョン方針を変える場合はこのファイルを編集する。
 
-`bin/install.sh` は設定を書き換えず、ホームを基準に Node / npm を導入する。
-Firebase CLI も同じ環境で導入するため、実行元プロジェクトの指定や対話シェルの有効化に依存しない。
+`bin/install.sh` は設定を書き換えず、ホームを基準に設定済みツールを導入する。
+実行元プロジェクトの指定や対話シェルの有効化には依存しない。
 プロジェクトでは、そのリポジトリの `mise.toml` を優先する。
 Windows と WSL のツール・依存ディレクトリは別々に扱う。
 
@@ -38,8 +46,10 @@ PATH 上、次に `~/.local/bin/mise` を確認する。ターミナルを開き
 mise doctor
 mise which node
 mise which npm
+mise which firebase
 node --version
 npm --version
+firebase --version
 ```
 
 Zsh では Homebrew の shellenv 設定より後の `.zshrc` に `eval "$(mise activate zsh)"` を追加する。
@@ -50,17 +60,24 @@ Bash 設定全体を Zsh から読み込まない。
 共通設定のリンク後、ツールだけ導入する場合:
 
 ```bash
-mise install --cd "$HOME" --jobs 1 node npm
-mise exec --cd "$HOME" -- npm install -g firebase-tools
+mise install --cd "$HOME" --jobs 1
 ```
 
-Node / npm を明示更新する場合は `mise upgrade --cd "$HOME" --jobs 1 node npm`。
-グローバルパッケージは Node のバージョンごとに再導入が必要になる場合がある。
+共通ツールを明示更新する場合は `mise upgrade --cd "$HOME" --jobs 1`。
+Firebase CLI だけなら末尾に `npm:firebase-tools` を加える。
+ツールは mise の個別ディレクトリへ導入し、Node のグローバルパッケージ領域へ直接追加しない。
+既存のグローバル版は自動削除せず、反映後に `command -v firebase` と `mise which firebase` が同じ実体を指すことを確認する。
 プロジェクトで別のバージョンを指定する例は `mise use node@24`。
 設定を確認してから `mise install` し、非対話のスクリプトや CI では `mise exec -- <command>` を使う。
 mise 本体の更新は導入元の apt / Homebrew / winget で行う。
 
 [mise の公式手順](https://mise.jdx.dev/installing-mise.html)、[シェルの有効化](https://mise.jdx.dev/cli/activate.html)。
+
+### CLI とプロジェクト依存の分担
+
+端末共通の CLI は mise のグローバル設定で管理し、プロジェクト固有のバージョンはその `mise.toml` で指定する。
+npm 配布の CLI は `npm:<パッケージ名>` を使う。[npm backend](https://mise.jdx.dev/dev-tools/backends/npm.html)を参照。
+プロジェクトの `package.json` にある開発ツールとライブラリは、その依存定義と npm スクリプトで管理する。
 
 ## GitHub CLI の初回認証
 
@@ -85,6 +102,22 @@ PR 作成には push 権限とコミット用の `user.name` / `user.email` も�
 ```bash
 INSTALL_FLUTTER=1 bash ~/git/dotfiles/bin/install.sh
 ```
+
+Flutter SDK の使用バージョンはプロジェクトの `mise.toml` で指定できる。
+依存パッケージの更新は SDK の選択とは別の操作で、対象プロジェクトの mise タスクにまとめる。
+共通の `updateFlutter` / `updateFirebaseFunctions` 関数と、それらを呼ぶ `n` エイリアスは定義しない。
+
+プロジェクトの `mise.toml` に記載する例:
+
+```toml
+[tasks."deps:update"]
+description = "pubspec.yaml の制約内で依存パッケージを更新"
+run = "flutter pub upgrade"
+```
+
+プロジェクト内で `mise run deps:update` を実行し、そのプロジェクトの解析・テストで検証する。
+メジャー更新は必要なときに `flutter pub outdated` で確認し、`flutter pub upgrade --major-versions` を明示実行する。
+[mise タスク](https://mise.jdx.dev/tasks/)、[Flutter の SDK と依存更新](https://docs.flutter.dev/install/upgrade)。
 
 ## スキル用 Python
 

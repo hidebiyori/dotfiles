@@ -423,10 +423,10 @@ function setWslIntegration()
   fi
 }
 
-function setNode()
+function setMiseTools()
 {
   # Read the linked global config without rewriting it or loading a project config.
-  mise install --cd "${HOME}" --jobs 1 node npm
+  mise install --cd "${HOME}" --jobs 1
 }
 
 function setFlutter()
@@ -439,16 +439,6 @@ function setFlutter()
   flutter channel stable
   flutter precache
   flutter doctor
-}
-
-function setFirebase()
-{
-  # https://firebase.google.com/docs/cli
-  mise exec --cd "${HOME}" -- npm install -g firebase-tools
-
-  # memo
-  # firebase login --no-localhost
-  # firebase projects:list
 }
 
 function main()
@@ -491,11 +481,10 @@ function main()
 
   ### Common ###
   bash "${PJ_ROOT}/bin/setup-skill-python.sh"
-  setNode
+  setMiseTools
   if [[ "${INSTALL_FLUTTER:-0}" == "1" ]]; then
     setFlutter
   fi
-  setFirebase
   echo "Success: ${0}"
 }
 

@@ -1,3 +1,5 @@
 [tools]
-node = "lts"
+# Prefer managed CLIs and npm over commands in Node's global package directory.
+"npm:firebase-tools" = "latest"
 npm = "latest"
+node = "lts"
