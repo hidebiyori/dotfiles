@@ -203,8 +203,8 @@ esac
         calls = self.log.read_text()
         self.assertIn("sudo apt install -y python3-venv", calls)
         self.assertIn("skill-python", calls)
-        self.assertIn(f"mise install --cd {self.home} --jobs 1 node npm", calls)
-        self.assertIn(f"mise exec --cd {self.home} -- npm install -g firebase-tools", calls)
+        self.assertIn(f"mise install --cd {self.home} --jobs 1\n", calls)
+        self.assertNotIn("npm install -g", calls)
         self.assertNotIn("flutter", calls)
 
     def test_wsl_detection_uses_environment_and_kernel_without_affecting_other_platforms(self):
@@ -385,8 +385,7 @@ main
 ''')
         calls = self.log.read_text()
         for expected in ("brew update", "brew upgrade", "brew list --versions gh", "defaults write com.apple.screencapture", "skill-python",
-                         f"mise install --cd {self.home} --jobs 1 node npm",
-                         f"mise exec --cd {self.home} -- npm install -g firebase-tools"):
+                         f"mise install --cd {self.home} --jobs 1\n"):
             self.assertIn(expected, calls)
         self.assertNotIn("sudo", calls)
         self.assertNotIn("linux-launcher", calls)
