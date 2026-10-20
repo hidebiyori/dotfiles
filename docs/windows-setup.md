@@ -2,6 +2,7 @@
 
 プロジェクト追加時のパスは [README 冒頭の早見表](../README.md#windows-codex-でプロジェクトを追加するとき)を参照する。
 Windows アプリは `bin/install-windows.ps1`、WSL 内は `bin/install.sh` で構築する。
+左 Win → Alt と Print Screen は、通常セットアップとは別の[キー設定手順](windows-keyboard.md)で適用する。
 
 ## 初回に実行すること
 
