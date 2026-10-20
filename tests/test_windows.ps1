@@ -71,6 +71,43 @@ Test-Case 'Installed apps are not reinstalled' {
     Install-WindowsApps
     Assert-True ($script:Calls.Count -eq 4) 'Only four list queries expected.'
     Assert-True (@($script:Calls | Where-Object { -not $_.StartsWith('list ') }).Count -eq 0) 'Unexpected install or upgrade.'
+    Assert-True (($script:Calls -join ' ') -notlike '*Valve.Steam*') 'Steam must be explicitly selected even when installed.'
+}
+
+Test-Case 'Opt-in Steam installs once and is kept on rerun' {
+    $script:SteamInstalled = $false
+    Set-Mock 'Invoke-WingetNative' {
+        param([string[]]$CommandArguments)
+        $script:Calls.Add(($CommandArguments -join ' '))
+        if ($CommandArguments[2] -ne 'Valve.Steam') { return 0 }
+        if ($CommandArguments[0] -eq 'list') {
+            if ($script:SteamInstalled) { return 0 }
+            return 2316632084L
+        }
+        $script:SteamInstalled = $true
+        return 0
+    }
+    Install-WindowsApps -IncludeSteam
+    Install-WindowsApps -IncludeSteam
+    Assert-True $script:SteamInstalled 'Steam was not installed.'
+    Assert-True ($script:Calls.Count -eq 11) 'Expected five queries per run and one installation.'
+    $installs = @($script:Calls | Where-Object { $_.StartsWith('install ') })
+    Assert-True ($installs.Count -eq 1 -and $installs[0] -like 'install --id Valve.Steam --exact --source winget *--silent --no-upgrade') 'Only the exact Steam package should be installed once.'
+}
+
+Test-Case 'Steam upgrades require both explicit options' {
+    Set-Mock 'Invoke-WingetNative' {
+        param([string[]]$CommandArguments)
+        $script:Calls.Add(($CommandArguments -join ' '))
+        if ($CommandArguments[0] -eq 'upgrade') { return 2316632107L }
+        return 0
+    }
+    Install-WindowsApps -Upgrade
+    Assert-True (($script:Calls -join ' ') -notlike '*Valve.Steam*') 'Default upgrades must not manage Steam.'
+    Install-WindowsApps -IncludeSteam
+    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('upgrade --id Valve.Steam ') }).Count -eq 0) 'Selecting installed Steam must not upgrade it.'
+    Install-WindowsApps -Upgrade -IncludeSteam
+    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('upgrade --id Valve.Steam --exact --source winget ') }).Count -eq 1) 'Expected one explicitly requested Steam upgrade.'
 }
 
 Test-Case 'Missing apps install only the exact selected packages' {
@@ -266,6 +303,19 @@ Test-Case 'AppsOnly does not touch WSL' {
     Set-Mock 'Initialize-Wsl' { throw 'Unexpected WSL operation.' }
     Assert-True (Invoke-WindowsSetup -Name Ubuntu -OnlyApps) 'Apps-only setup should complete.'
     Assert-True (($script:Calls -join ',') -eq 'apps,extension') 'Wrong apps-only operations.'
+}
+
+Test-Case 'Setup forwards Steam selection with AppsOnly and upgrades' {
+    Set-Mock 'Assert-WindowsHost' { param([switch]$OnlyApps) Assert-True $OnlyApps 'Apps-only host check expected.' }
+    Set-Mock 'Install-WindowsApps' {
+        param([switch]$Upgrade, [switch]$IncludeSteam)
+        Assert-True ($Upgrade -and $IncludeSteam) 'Steam selection and upgrade options were not forwarded.'
+        $script:Calls.Add('apps-with-steam')
+    }
+    Set-Mock 'Install-WslExtension' { $script:Calls.Add('extension') }
+    Set-Mock 'Initialize-Wsl' { throw 'Unexpected WSL operation.' }
+    Assert-True (Invoke-WindowsSetup -Name Ubuntu -OnlyApps -Upgrade -IncludeSteam) 'Opt-in apps-only setup should complete.'
+    Assert-True (($script:Calls -join ',') -eq 'apps-with-steam,extension') 'Wrong opt-in apps-only operations.'
 }
 
 Test-Case 'New WSL installation stops before Linux bootstrap' {
