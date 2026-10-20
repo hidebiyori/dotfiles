@@ -3,8 +3,8 @@
 
 function Initialize-KeyboardMocks {
     $script:KeyboardBackup = Join-Path $script:KeyboardTestRoot ([Guid]::NewGuid().ToString() + '.json')
-    $script:KeyboardRegistry = [pscustomobject]@{ ScancodeMap = $null; PrintScreenSnipping = $null }
-    $script:FailKeyboardSnipping = $false
+    $script:KeyboardRegistry = [pscustomobject]@{ ScancodeMap = $null }
+    $script:FailKeyboardWrite = $false
     Set-Mock 'Assert-WindowsKeyboardAdministrator' {}
     Set-Mock 'Get-ItemProperty' {
         param([string]$LiteralPath)
@@ -12,10 +12,6 @@ function Initialize-KeyboardMocks {
         if ($LiteralPath -eq 'HKLM:\SYSTEM\CurrentControlSet\Control\Keyboard Layout') {
             if ($null -ne $script:KeyboardRegistry.ScancodeMap) {
                 $values['Scancode Map'] = ConvertTo-KeyboardMapBytes $script:KeyboardRegistry.ScancodeMap
-            }
-        } elseif ($LiteralPath -eq 'HKCU:\Control Panel\Keyboard') {
-            if ($null -ne $script:KeyboardRegistry.PrintScreenSnipping) {
-                $values['PrintScreenKeyForSnippingEnabled'] = $script:KeyboardRegistry.PrintScreenSnipping
             }
         } else { throw 'Unexpected registry read.' }
         [pscustomobject]$values
@@ -25,10 +21,8 @@ function Initialize-KeyboardMocks {
         Assert-True $Force 'Expected an explicit registry value update.'
         if ($LiteralPath -eq 'HKLM:\SYSTEM\CurrentControlSet\Control\Keyboard Layout' -and $Name -eq 'Scancode Map' -and $PropertyType -eq 'Binary') {
             Assert-True ($Value -is [byte[]]) 'Scancode Map must be REG_BINARY.'
+            if ($script:FailKeyboardWrite) { throw 'Synthetic registry write failure.' }
             $script:KeyboardRegistry.ScancodeMap = [BitConverter]::ToString($Value).Replace('-', '')
-        } elseif ($LiteralPath -eq 'HKCU:\Control Panel\Keyboard' -and $Name -eq 'PrintScreenKeyForSnippingEnabled' -and $PropertyType -eq 'DWord') {
-            if ($script:FailKeyboardSnipping) { throw 'Synthetic Print Screen failure.' }
-            $script:KeyboardRegistry.PrintScreenSnipping = [int]$Value
         } else { throw 'Unexpected registry write.' }
         $script:Calls.Add('set:' + $Name)
     }
@@ -36,8 +30,6 @@ function Initialize-KeyboardMocks {
         param([string]$LiteralPath, [string]$Name)
         if ($LiteralPath -eq 'HKLM:\SYSTEM\CurrentControlSet\Control\Keyboard Layout' -and $Name -eq 'Scancode Map') {
             $script:KeyboardRegistry.ScancodeMap = $null
-        } elseif ($LiteralPath -eq 'HKCU:\Control Panel\Keyboard' -and $Name -eq 'PrintScreenKeyForSnippingEnabled') {
-            $script:KeyboardRegistry.PrintScreenSnipping = $null
         } else { throw 'Unexpected registry removal.' }
         $script:Calls.Add('remove:' + $Name)
     }
@@ -51,45 +43,61 @@ try {
         Assert-True ($bytes.Length -eq 20 -and [BitConverter]::ToUInt32($bytes, 8) -eq 2) 'Expected one mapping plus the terminator.'
         Assert-True ([BitConverter]::ToUInt16($bytes, 12) -eq 0x0038) 'Expected left Alt as the destination.'
         Assert-True ([BitConverter]::ToUInt16($bytes, 14) -eq 0xE05B) 'Expected left Windows as the source.'
-        Assert-True ($profile.PrintScreenSnipping -eq 1) 'Expected Print Screen snipping.'
+        Assert-True (@($profile.PSObject.Properties).Count -eq 1) 'Only Scancode Map should be managed.'
         Assert-Throws { ConvertTo-KeyboardMapBytes 'not-hex' } '*Invalid Scancode Map*'
         Assert-Throws { ConvertTo-KeyboardMapBytes '00000000000000000300000038005BE000000000' } '*Invalid Scancode Map*'
     }
 
-    Test-Case 'Keyboard apply backs up absent values and repeated apply preserves the backup' {
+    Test-Case 'Keyboard apply backs up an absent map and repeated apply preserves the backup' {
         Initialize-KeyboardMocks
         Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup
         Assert-True (Test-KeyboardStateEqual $script:KeyboardRegistry (Get-WindowsKeyboardProfile)) 'Requested settings were not saved.'
         $original = Get-Content -LiteralPath $script:KeyboardBackup -Raw
         $backup = Get-WindowsKeyboardBackup $script:KeyboardBackup
-        Assert-True ($null -eq $backup.Before.ScancodeMap -and $null -eq $backup.Before.PrintScreenSnipping) 'Original absence must be recorded.'
+        Assert-True ($null -eq $backup.Before.ScancodeMap) 'Original absence must be recorded.'
+        Assert-True (@($backup.Before.PSObject.Properties).Count -eq 1) 'Backup must only contain Scancode Map.'
         Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup
-        Assert-True ($script:Calls.Count -eq 2) 'Repeated apply must not write registry values again.'
+        Assert-True ($script:Calls.Count -eq 1) 'Repeated apply must not write registry values again.'
         Assert-True ((Get-Content -LiteralPath $script:KeyboardBackup -Raw) -ceq $original) 'Repeated apply replaced the original backup.'
     }
 
-    Test-Case 'Keyboard restore removes values that were originally absent and is repeatable' {
+    Test-Case 'Keyboard restore removes an originally absent map and is repeatable' {
         Initialize-KeyboardMocks
         Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup
         Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup -Restore
-        Assert-True ($null -eq $script:KeyboardRegistry.ScancodeMap -and $null -eq $script:KeyboardRegistry.PrintScreenSnipping) 'Originally absent values were not removed.'
+        Assert-True ($null -eq $script:KeyboardRegistry.ScancodeMap) 'Originally absent map was not removed.'
         Assert-True (-not (Test-Path -LiteralPath $script:KeyboardBackup)) 'Verified restore must remove the backup.'
         Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup -Restore
-        Assert-True ($script:Calls.Count -eq 4) 'Repeated restore must not change registry values.'
+        Assert-True ($script:Calls.Count -eq 2) 'Repeated restore must not change registry values.'
     }
 
-    Test-Case 'Keyboard restore preserves a preexisting matching map and disabled Print Screen setting' {
+    Test-Case 'A preexisting matching map is not backed up or claimed for restore' {
         Initialize-KeyboardMocks
         $script:KeyboardRegistry.ScancodeMap = (Get-WindowsKeyboardProfile).ScancodeMap
-        $script:KeyboardRegistry.PrintScreenSnipping = 0
         Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup
         Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup -Restore
         Assert-True ($script:KeyboardRegistry.ScancodeMap -eq (Get-WindowsKeyboardProfile).ScancodeMap) 'Preexisting matching map was removed.'
-        Assert-True ($script:KeyboardRegistry.PrintScreenSnipping -eq 0) 'Explicit zero was confused with an absent value.'
-        Assert-True (($script:Calls -join ',') -eq 'set:PrintScreenKeyForSnippingEnabled,set:PrintScreenKeyForSnippingEnabled') 'Only the Print Screen setting should change.'
+        Assert-True ($script:Calls.Count -eq 0 -and -not (Test-Path -LiteralPath $script:KeyboardBackup)) 'An already matching map should not be managed as a new change.'
     }
 
-    Test-Case 'A conflicting Scancode Map stops before changing either setting or saving a backup' {
+    Test-Case 'Backup fields outside Scancode Map are ignored during apply and restore' {
+        Initialize-KeyboardMocks
+        $script:KeyboardRegistry.ScancodeMap = (Get-WindowsKeyboardProfile).ScancodeMap
+        $backup = [pscustomobject]@{
+            Version = 1
+            Before = [pscustomobject]@{ ScancodeMap = $null; PrintScreenSnipping = 0 }
+            Applied = [pscustomobject]@{ ScancodeMap = $script:KeyboardRegistry.ScancodeMap; PrintScreenSnipping = 1 }
+        }
+        New-Item -ItemType Directory -Path $script:KeyboardTestRoot -Force | Out-Null
+        $backup | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $script:KeyboardBackup
+        Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup
+        Assert-True ($script:Calls.Count -eq 0) 'Extra backup fields caused registry writes during apply.'
+        Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup -Restore
+        Assert-True ($null -eq $script:KeyboardRegistry.ScancodeMap) 'The original map was not restored.'
+        Assert-True (($script:Calls -join ',') -eq 'remove:Scancode Map') 'Restore must not access settings outside Scancode Map.'
+    }
+
+    Test-Case 'A conflicting Scancode Map stops before changing settings or saving a backup' {
         Initialize-KeyboardMocks
         $script:KeyboardRegistry.ScancodeMap = '0000000000000000020000001D003A0000000000'
         Assert-Throws { Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup } '*different Scancode Map*'
@@ -105,8 +113,8 @@ try {
 
     Test-Case 'An unexpected registry value type is preserved without a backup or write' {
         Initialize-KeyboardMocks
-        $script:KeyboardRegistry.PrintScreenSnipping = [long]0
-        Assert-Throws { Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup } '*not a REG_DWORD*'
+        Set-Mock 'Get-ItemProperty' { [pscustomobject]@{ 'Scancode Map' = 'unexpected-type' } }
+        Assert-Throws { Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup } '*not a REG_BINARY*'
         Assert-True ($script:Calls.Count -eq 0 -and -not (Test-Path -LiteralPath $script:KeyboardBackup)) 'An unexpected value type was overwritten.'
     }
 
@@ -120,18 +128,20 @@ try {
     Test-Case 'Restore preserves externally modified registry settings and its backup' {
         Initialize-KeyboardMocks
         Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup
-        $script:KeyboardRegistry.PrintScreenSnipping = 0
+        $script:KeyboardRegistry.ScancodeMap = '0000000000000000020000001D003A0000000000'
         Assert-Throws { Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup -Restore } '*changed outside this script*'
-        Assert-True ($script:Calls.Count -eq 2 -and (Test-Path -LiteralPath $script:KeyboardBackup)) 'Restore overwrote an external change or discarded its backup.'
+        Assert-True ($script:Calls.Count -eq 1 -and (Test-Path -LiteralPath $script:KeyboardBackup)) 'Restore overwrote an external change or discarded its backup.'
     }
 
-    Test-Case 'A partial keyboard apply keeps a usable backup for restore' {
+    Test-Case 'A failed registry write keeps a usable backup for retry and restore' {
         Initialize-KeyboardMocks
-        $script:FailKeyboardSnipping = $true
-        Assert-Throws { Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup } '*Synthetic Print Screen failure*'
-        Assert-True ($null -ne $script:KeyboardRegistry.ScancodeMap -and (Test-Path -LiteralPath $script:KeyboardBackup)) 'Partial apply lost its backup.'
+        $script:FailKeyboardWrite = $true
+        Assert-Throws { Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup } '*Synthetic registry write failure*'
+        Assert-True ($null -eq $script:KeyboardRegistry.ScancodeMap -and (Test-Path -LiteralPath $script:KeyboardBackup)) 'Failed write changed the map or lost its backup.'
+        $script:FailKeyboardWrite = $false
+        Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup
         Invoke-WindowsKeyboardSetup -BackupPath $script:KeyboardBackup -Restore
-        Assert-True ($null -eq $script:KeyboardRegistry.ScancodeMap -and $null -eq $script:KeyboardRegistry.PrintScreenSnipping) 'Partial apply could not be restored.'
+        Assert-True ($null -eq $script:KeyboardRegistry.ScancodeMap) 'Retried apply could not be restored.'
     }
 
     Test-Case 'Backup failure stops before any keyboard registry write' {

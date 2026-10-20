@@ -28,7 +28,7 @@ Mac、Chromebook の Linux 開発環境、Windows 11 / WSL2 で使う共通設�
 Windows アプリ、WSL2、WSL 内の clone とセットアップを順に準備する。
 Git for Windows や Windows 側での手動 clone は事前準備に不要。
 Steam は [`-IncludeSteam` を指定した場合だけ](docs/desktop-apps.md#steam任意)追加できる。
-左 Win → Alt と Print Screen の設定は、[キー設定の専用コマンド](docs/windows-keyboard.md)で任意に適用できる。
+左 Win → Alt の設定は、[キー設定の専用コマンド](docs/windows-keyboard.md)で任意に適用できる。
 
 ### Mac / Chromebook / 準備済みの WSL2
 
@@ -66,7 +66,7 @@ Linux のパッケージ管理は apt を使い、WSL では Windows 側の GUI 
 | 文書 | 内容 |
 | --- | --- |
 | [Windows / WSL2](docs/windows-setup.md) | 初回導入、オプション、Codex の WSL 設定、エラー時の扱い |
-| [Windows のキー設定](docs/windows-keyboard.md) | 常駐なしの左 Win → Alt、Print Screen、元に戻す方法、Copilot / Fn の制約 |
+| [Windows のキー設定](docs/windows-keyboard.md) | 常駐なしの左 Win → Alt、元に戻す方法、Copilot / Fn の制約 |
 | [開発ツール](docs/development-tools.md) | 手動リンクを使う設定、mise / CLI、GitHub 初回認証、Flutter、スキル用 Python |
 | [デスクトップアプリ](docs/desktop-apps.md) | OS 別の導入・更新、Chromebook の最大化起動 |
 | [Codex の共通指示とスキル](docs/codex.md) | AGENTS.md の管理場所・同期、共通とプロジェクト固有の分担 |
