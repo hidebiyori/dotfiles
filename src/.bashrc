@@ -29,18 +29,35 @@ else
 fi
 
 export GIT_ROOT="${HOME}/git"
+export AP1_ROOT="${GIT_ROOT}/app01-flutter"
+export AP2_ROOT="${GIT_ROOT}/app02-nextjs"
 export DOT_ROOT="${GIT_ROOT}/dotfiles"
+export DOC_MAIN="${HOME}/var/0001-data/0001-hide/0001-soon"
 alias r="source ${HOME}/.bash_profile"
 alias u="${GIT_ROOT}/dotfiles/bin/install.sh && r"
 alias o="if [[ ! x${TERM} =~ xscreen ]]; then screen -U -D -R; fi"
+alias a="cd ${AP1_ROOT}"
 alias s="cd ${GIT_ROOT}/dotfiles"
 alias d="cd ${GIT_ROOT}"
+alias f="cd ${DOC_MAIN}"
 alias h="history | tail -n 50"
 alias l="ls -Al"
 alias ll="l"
 alias lt="ls -Altr"
 alias vim="vim -vfp"
-alias v="vim -p ${DOT_ROOT}/bin/install.sh ${HOME}/.bash_profile ${HOME}/.bashrc ${HOME}/.vimrc"
+alias v="\
+  vim \
+  ${DOC_MAIN}/001-memo.txt \
+  ${DOT_ROOT}/bin/install.sh \
+  -c '2tabnext' \
+  -c 'vsplit ${HOME}/.bash_profile' \
+  -c 'split ${HOME}/.bashrc' \
+  -c 'wincmd l' \
+  -c 'split ${HOME}/.vimrc' \
+  -c 'wincmd h' \
+  -c 'tabfirst' \
+  -c 'cd ${AP1_ROOT}' \
+"
 alias b="vim -S ${HOME}/.vim/session"
 
 uname="$(uname -a)"
