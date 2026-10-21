@@ -59,7 +59,6 @@ Linux のパッケージ管理は apt を使い、WSL では Windows 側の GUI 
 - 通信・権限・検証の失敗時は停止する。原因を解消して再実行する。途中の反映は自動で巻き戻さない。
   Git の分岐や更新を妨げるローカル変更は自動で解消しない。
 - 実行前にリポジトリの変更を確認する場合は `git fetch` と `git diff HEAD..origin/main` を使う。
-  FFmpeg は [`INSTALL_FFMPEG=1` を指定した場合](docs/development-tools.md#ffmpeg任意)だけ追加する。
   Flutter は[明示指定した場合](docs/development-tools.md#flutter任意)だけ導入・更新する。
 
 ## 目的別の手順
