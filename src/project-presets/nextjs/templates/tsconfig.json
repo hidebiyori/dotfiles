@@ -1,0 +1,17 @@
+{
+  "extends": "./config/presets/nextjs/tsconfig-next.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

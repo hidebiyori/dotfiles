@@ -60,6 +60,9 @@ function setSymbolicLink()
     local srcPath="${srcRoot}/${file}"
     local dstPath="${dstRoot}/${file}"
 
+    # Project presets are copied explicitly into each repository, not HOME.
+    [[ "${srcPath}" == "${PJ_ROOT}/src/project-presets" ]] && continue
+
     if isWsl && [[ "${srcPath}" == "${PJ_ROOT}/src/.sommelierrc" || "${srcPath}" == "${PJ_ROOT}/src/.config/Code" ]]; then
       continue
     fi
