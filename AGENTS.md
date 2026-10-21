@@ -19,6 +19,7 @@ for file in bin/install.sh bin/setup-skill-python.sh src/.bash_profile src/.bash
   bash -n "$file" || exit
 done
 python3 -B -m unittest discover -s tests -v
+python3 -B bin/check-markdown-links.py .
 git diff --check
 ```
 

@@ -27,6 +27,8 @@ jobs:
           done
       - name: Python tests with stubbed installers
         run: python3 -B -m unittest discover -s tests -v
+      - name: Markdown relative links
+        run: python3 -B bin/check-markdown-links.py .
 
   windows:
     runs-on: windows-latest
