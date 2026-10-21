@@ -79,6 +79,24 @@ mise 本体の更新は導入元の apt / Homebrew / winget で行う。
 npm 配布の CLI は `npm:<パッケージ名>` を使う。[npm backend](https://mise.jdx.dev/dev-tools/backends/npm.html)を参照。
 プロジェクトの `package.json` にある開発ツールとライブラリは、その依存定義と npm スクリプトで管理する。
 
+## ZIP の展開・検証（unzip）
+
+Linux / Chromebook / WSL では `bin/install.sh` が apt の共通パッケージとして `unzip` を導入する。
+apt は導入済みのパッケージを再利用する。macOS は OS 付属の `unzip` を使う。
+
+Linux / Chromebook / WSL で `unzip` だけを追加する場合:
+
+```bash
+command -v unzip >/dev/null 2>&1 || sudo apt install --no-install-recommends unzip
+```
+
+導入後はターミナルを開き直さず、次で確認できる。
+
+```bash
+command -v unzip
+unzip -v
+```
+
 ## GitHub CLI の初回認証
 
 `gh` は全対応環境で導入する。Codex がコマンドを実行する環境で初回認証する。

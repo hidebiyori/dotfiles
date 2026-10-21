@@ -301,7 +301,7 @@ function setApt()
 {
   sudo apt update
   sudo apt upgrade
-  local packages=(screen ca-certificates curl gh)
+  local packages=(screen ca-certificates curl gh unzip)
   if isWsl; then
     packages+=(git vim)
   fi
