@@ -432,6 +432,30 @@ function setMiseTools()
   mise install --cd "${HOME}" --jobs 1
 }
 
+function setFfmpeg()
+{
+  if command -v ffmpeg >/dev/null 2>&1 && command -v ffprobe >/dev/null 2>&1; then
+    return
+  fi
+
+  if [[ "${uname}" =~ "Darwin" ]]; then
+    brew install ffmpeg || return
+  elif [[ "${uname}" =~ "Linux" ]]; then
+    sudo apt install --no-install-recommends ffmpeg || return
+  else
+    echo 'FFmpeg: この OS は任意導入の対象外です。' >&2
+    return 1
+  fi
+
+  local tool
+  for tool in ffmpeg ffprobe; do
+    if ! command -v "${tool}" >/dev/null 2>&1; then
+      echo "${tool}: 導入後も PATH 上に見つかりません。" >&2
+      return 1
+    fi
+  done
+}
+
 function setFlutter()
 {
   # https://flutter.dev/docs/get-started/install/linux
@@ -485,6 +509,9 @@ function main()
   ### Common ###
   bash "${PJ_ROOT}/bin/setup-skill-python.sh"
   setMiseTools
+  if [[ "${INSTALL_FFMPEG:-0}" == "1" ]]; then
+    setFfmpeg
+  fi
   if [[ "${INSTALL_FLUTTER:-0}" == "1" ]]; then
     setFlutter
   fi
