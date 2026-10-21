@@ -1,3 +1,6 @@
+# 自動 PR は停止し、脆弱性はアラートで確認する。
+# security updates は GitHub 側で別途停止する。
+# dotfiles の bin/configure-dependabot.py と docs/repository-maintenance.md を参照。
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -6,7 +9,7 @@ updates:
       interval: weekly
       day: monday
       timezone: Asia/Tokyo
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
     groups:
       actions-minor-and-patch:
         patterns: ["*"]
@@ -17,7 +20,7 @@ updates:
       interval: weekly
       day: monday
       timezone: Asia/Tokyo
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
     groups:
       npm-minor-and-patch:
         patterns: ["*"]

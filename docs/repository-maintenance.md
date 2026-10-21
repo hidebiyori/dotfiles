@@ -44,10 +44,12 @@ python3 ~/git/dotfiles/bin/init-project-config.py /path/to/repository --github-a
 python3 ~/git/dotfiles/bin/init-project-config.py /path/to/repository --github-actions --write
 ```
 
-Node / npm のアプリでは次の `--node` を使う。npm と GitHub Actions の両方を更新対象にする。
-Dependabot は月曜に週次でバージョン更新を確認し、minor / patch をまとめる。
-major は別 PR とし、同時に開く更新 PR は各エコシステムで3件までにする。
-セキュリティ更新の動作は週次のバージョン更新とは別に扱う。
+Node / npm のアプリでは次の `--node` を使う。npm と GitHub Actions の設定を用意する。
+どちらの雛形も `open-pull-requests-limit: 0` とし、通常更新 PR は作らない。
+脆弱性はアラートで確認し、修正を手動で行う。
+セキュリティ更新 PR も停止するには、次の GitHub 側の設定を別途実施する。
+将来バージョン更新 PR を使う場合は、各リポジトリで上限を変更する。
+雛形のスケジュールは月曜の週次、minor / patch はグループ化、major は別 PR としてある。
 [Dependabot の設定](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference)。
 
 `.github/dependabot.yml` / `.github/dependabot.yaml` が既にあれば維持する。
