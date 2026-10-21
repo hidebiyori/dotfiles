@@ -7,11 +7,11 @@
 参照先の取得・作成は利用者が行う。dotfiles の整理・公開情報の見直し・ツール管理の変更だけを理由に、
 これらのパスや関連設定を変更・削除・改名しない。変更するのは利用者が明示的に指定した場合に限る。
 
-## mise / Node / npm / Firebase CLI
+## mise / Python / Node / npm / Firebase CLI
 
 グローバル設定は [`src/.config/mise/config.toml`](../src/.config/mise/config.toml) で管理し、
 セットアップで `~/.config/mise/config.toml` へリンクする。
-共通の既定値は Node の `lts`、npm と `npm:firebase-tools` の `latest`。
+共通の既定値は Python の `3.14`、Node の `lts`、npm と `npm:firebase-tools` の `latest`。
 npm と Firebase CLI はそれぞれ独立したツールとして管理する。
 バージョン方針を変える場合はこのファイルを編集する。
 
@@ -44,9 +44,11 @@ PATH 上、次に `~/.local/bin/mise` を確認する。ターミナルを開き
 
 ```bash
 mise doctor
+mise which python3
 mise which node
 mise which npm
 mise which firebase
+python3 --version
 node --version
 npm --version
 firebase --version
@@ -78,6 +80,26 @@ mise 本体の更新は導入元の apt / Homebrew / winget で行う。
 端末共通の CLI は mise のグローバル設定で管理し、プロジェクト固有のバージョンはその `mise.toml` で指定する。
 npm 配布の CLI は `npm:<パッケージ名>` を使う。[npm backend](https://mise.jdx.dev/dev-tools/backends/npm.html)を参照。
 プロジェクトの `package.json` にある開発ツールとライブラリは、その依存定義と npm スクリプトで管理する。
+
+## Python（ユーザー共通）
+
+通常使う `python` / `python3` は、mise のグローバル設定で `3.14` 系を選ぶ。
+同じ系列のパッチ更新を取り込み、別のマイナーバージョンへ移す場合は共通設定を明示的に変更する。
+Python だけを導入・確認する場合:
+
+```bash
+mise install --cd "$HOME" --jobs 1 python
+mise exec --cd "$HOME" -- python3 --version
+```
+
+プロジェクトで別の系列が必要な場合だけ、そのルートで `mise use python@3.13` などを指定する。
+ライブラリは各プロジェクトの仮想環境で管理し、共通 Python へ一括導入しない。
+既存の仮想環境はそのまま利用する。Python の系列を切り替える必要がある場合は、
+そのプロジェクトの手順で仮想環境を作り直す。
+
+初回セットアップ用の Python は引き続き apt / Homebrew で準備する。
+OS の Python とスキル用の既存仮想環境は、mise の共通 Python を追加しても置き換えない。
+[mise の Python 管理](https://mise.jdx.dev/lang/python.html)を参照。
 
 ## FFmpeg（プロジェクトごと）
 

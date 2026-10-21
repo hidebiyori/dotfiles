@@ -53,7 +53,7 @@ Linux のパッケージ管理は apt を使い、WSL では Windows 側の GUI 
 ## 更新と再実行
 
 - `u` はリポジトリの fast-forward 更新、設定の再適用、OS パッケージと開発ツールの更新を行う。
-  Node / npm / Firebase CLI は [mise の共通設定](src/.config/mise/config.toml)で管理する。
+  Python / Node / npm / Firebase CLI は [mise の共通設定](src/.config/mise/config.toml)で管理する。
 - 同じ設定リンク・コピー・導入済みアプリを再利用する。Downloads / MyDrive の実ディレクトリは維持する。
   Windows / Mac の対象アプリを明示更新する方法は[アプリ管理](docs/desktop-apps.md)を参照する。
 - 通信・権限・検証の失敗時は停止する。原因を解消して再実行する。途中の反映は自動で巻き戻さない。
