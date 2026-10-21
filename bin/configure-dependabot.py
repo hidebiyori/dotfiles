@@ -72,6 +72,17 @@ def alerts(api):
     return status == 204
 
 
+def verify_state(api, read_state, expected, message):
+    # Successful writes can briefly be followed by the old state. Retry only
+    # these reads; API errors still stop immediately and writes are never retried.
+    for attempt in range(3):
+        if read_state(api) == expected:
+            return
+        if attempt < 2:
+            time.sleep(2)
+    raise ConfigError(message)
+
+
 def configure(repository, write=False):
     api = GitHub(repository)
     _, body = api.request("GET")
@@ -96,15 +107,14 @@ def configure(repository, write=False):
     if updates_enabled:
         api.request("DELETE", "/automated-security-fixes", (204,))
         # Disable automatic PRs before enabling alerts, which may discover issues.
-        if security_updates(api):
-            raise ConfigError("Dependabot security updates の停止を確認できませんでした")
+        verify_state(api, security_updates, False,
+                     "Dependabot security updates の停止を確認できませんでした")
     if not alerts_enabled:
         api.request("PUT", "/vulnerability-alerts", (204,))
     if updates_enabled or not alerts_enabled:
-        final_updates = security_updates(api)
-        final_alerts = alerts(api)
-        if final_updates or not final_alerts:
-            raise ConfigError("設定が反映されていません。管理ポリシーと権限を確認してください")
+        message = "設定が反映されていません。管理ポリシーと権限を確認してください"
+        verify_state(api, security_updates, False, message)
+        verify_state(api, alerts, True, message)
     print("VERIFIED: security updates=disabled, alerts=enabled")
     print("通常更新 PR・auto-triage rules・メール通知は文書のチェックリストで確認してください")
 

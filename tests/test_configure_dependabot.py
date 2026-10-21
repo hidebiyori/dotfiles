@@ -23,6 +23,10 @@ class DependabotConfigTests(unittest.TestCase):
         self.overrides = {}
         self.ignore_delete = False
         self.ignore_enable_alerts = False
+        self.delay_updates = False
+        self.delay_alerts = False
+        self.pending_updates = False
+        self.pending_alerts = False
         self.leak = "private-fixture-response"
         self.sleeps = self.enterContext(patch.object(MODULE.time, "sleep"))
         self.enterContext(patch.object(MODULE.subprocess, "run", side_effect=self.gh))
@@ -40,19 +44,29 @@ class DependabotConfigTests(unittest.TestCase):
             status, body = 200, {"full_name": "example/project", "permissions": {"admin": self.admin}}
         elif endpoint.endswith("/automated-security-fixes"):
             if method == "DELETE":
-                if not self.ignore_delete:
+                if self.delay_updates:
+                    self.pending_updates = True
+                elif not self.ignore_delete:
                     self.updates = False
                 status, body = 204, None
             else:
                 status, body = ((200, {"enabled": True, "paused": False}) if self.updates
                                 else (404, {"message": self.leak}))
+                if self.pending_updates:
+                    self.updates = False
+                    self.pending_updates = False
         elif endpoint.endswith("/vulnerability-alerts"):
             if method == "PUT":
-                if not self.ignore_enable_alerts:
+                if self.delay_alerts:
+                    self.pending_alerts = True
+                elif not self.ignore_enable_alerts:
                     self.alerts = True
                 status, body = 204, None
             else:
                 status, body = (204, None) if self.alerts else (404, {"message": self.leak})
+                if self.pending_alerts:
+                    self.alerts = True
+                    self.pending_alerts = False
         else:
             self.fail("Unexpected API endpoint")
         return self.response(status, body)
@@ -70,7 +84,7 @@ class DependabotConfigTests(unittest.TestCase):
         self.assertNotIn(self.leak, stdout.getvalue() + stderr.getvalue())
         for delay in self.sleeps.call_args_list:
             self.assertGreaterEqual(delay.args[0], 1)
-        self.assertEqual(self.sleeps.call_count, max(0, len(self.calls) - 1))
+        self.assertGreaterEqual(self.sleeps.call_count, max(0, len(self.calls) - 1))
         return status, stdout.getvalue(), stderr.getvalue()
 
     def test_preview_only_reads_settings(self):
@@ -99,6 +113,16 @@ class DependabotConfigTests(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertIn("VERIFIED", stdout)
         self.assertEqual([method for method, _ in self.calls], ["GET"] * 3)
+
+    def test_delayed_state_is_verified_without_repeating_mutations(self):
+        self.delay_updates = self.delay_alerts = True
+        status, stdout, _ = self.run_main("--write")
+        self.assertEqual(status, 0)
+        self.assertIn("VERIFIED", stdout)
+        self.assertFalse(self.updates)
+        self.assertTrue(self.alerts)
+        self.assertEqual([method for method, _ in self.calls].count("DELETE"), 1)
+        self.assertEqual([method for method, _ in self.calls].count("PUT"), 1)
 
     def test_missing_repository_or_admin_permission_is_not_treated_as_disabled(self):
         self.overrides[("GET", "repos/example/project")] = self.response(404, {"message": self.leak})
