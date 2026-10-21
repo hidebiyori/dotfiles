@@ -63,6 +63,7 @@ class ProjectPresetTests(unittest.TestCase):
                 inherited = inherited[0]
             self.assertTrue((self.project / inherited).is_file())
         self.assertTrue((self.project / ".editorconfig").is_file())
+        self.assertTrue((self.project / "mise.toml").is_file())
         manifest = json.loads((self.destination / "manifest.json").read_text())
         for name, expected in manifest["files"].items():
             self.assertEqual(hashlib.sha256((self.destination / name).read_bytes()).hexdigest(),
@@ -83,6 +84,20 @@ class ProjectPresetTests(unittest.TestCase):
         result = self.run_sync("--init", "--write")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse((self.project / "tsconfig.json").exists())
+
+    def test_existing_mise_configuration_is_preserved(self):
+        for name in ("mise.toml", ".mise.toml"):
+            with self.subTest(name=name):
+                path = self.project / name
+                contents = '[tools]\nnode = "22"\n'
+                path.write_text(contents)
+                result = self.run_sync("--init", "--write")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(path.read_text(), contents)
+                self.assertIn("KEEP " + name, result.stdout)
+                alternative = ".mise.toml" if name == "mise.toml" else "mise.toml"
+                self.assertFalse((self.project / alternative).exists())
+                path.unlink()
 
     def test_existing_jsonc_and_local_settings_are_preserved(self):
         files = {"biome.jsonc": '// Project override\n{"formatter": {"lineWidth": 100}}\n',
