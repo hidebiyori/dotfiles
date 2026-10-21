@@ -79,40 +79,25 @@ mise 本体の更新は導入元の apt / Homebrew / winget で行う。
 npm 配布の CLI は `npm:<パッケージ名>` を使う。[npm backend](https://mise.jdx.dev/dev-tools/backends/npm.html)を参照。
 プロジェクトの `package.json` にある開発ツールとライブラリは、その依存定義と npm スクリプトで管理する。
 
-## FFmpeg（任意）
+## FFmpeg（プロジェクトごと）
 
-動画・音声の変換や実処理テストに `ffmpeg` と `ffprobe` が必要な端末だけ追加する。
-通常のセットアップでは追加しない。一括セットアップと併せて導入する場合:
+動画・音声処理に必要なリポジトリの `mise.toml` で `conda:ffmpeg` のバージョンを指定する。
+導入方法・必要なコーデック・対応プラットフォームと lockfile は、そのプロジェクトで管理する。
+Conda 自体の別途導入は不要。FFmpeg を共通ツールや OS の一括インストール対象へ追加しない。
 
-```bash
-INSTALL_FFMPEG=1 bash ~/git/dotfiles/bin/install.sh
-```
-
-両コマンドが PATH 上にあれば再導入しない。Linux / Chromebook / WSL は apt の `ffmpeg`、
-Mac は [Homebrew の `ffmpeg`](https://formulae.brew.sh/formula/ffmpeg) を使う。
-導入後の更新は、通常の `apt upgrade` / `brew upgrade` に従う。
-Windows / WSL では、ツールを実行する WSL 内へ導入する。
-
-既存環境へ FFmpeg だけを追加する場合は、環境に合うコマンドを実行する。
-Linux / Chromebook / WSL:
+対象プロジェクトの設定を確認してから、そのルートで導入・確認する。
+lockfile がある場合は、そのプロジェクトの `--locked` を使う手順に従う。
 
 ```bash
-sudo apt install --no-install-recommends ffmpeg
+mise trust
+mise install --jobs 1 conda:ffmpeg
+mise exec -- ffmpeg -version
+mise exec -- ffprobe -version
 ```
 
-Mac:
-
-```bash
-brew install ffmpeg
-```
-
-導入後は両コマンドを確認する。必要なコーデック・フィルターと実処理は各プロジェクトで検証する。
-
-```bash
-command -v ffmpeg ffprobe
-ffmpeg -version
-ffprobe -version
-```
+非対話のスクリプトや systemd でも `mise exec --cd <プロジェクトのルート> -- <コマンド>` を使い、
+必要なコーデック・フィルターと実処理をプロジェクト側で検証する。
+[mise の conda backend](https://mise.jdx.dev/dev-tools/backends/conda.html)を参照。
 
 ## ZIP の展開・検証（unzip）
 

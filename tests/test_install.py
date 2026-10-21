@@ -11,13 +11,6 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = ROOT / "bin/install.sh"
 PUBLIC_URL = "https://github.com/hidebiyori/dotfiles.git"
-FFMPEG_PATH_STUB = '''function command() {
-  if [[ "$#" == 2 && "$1" == -v && ( "$2" == ffmpeg || "$2" == ffprobe ) ]]; then
-    [[ -x "$HOME/commands/$2" ]] || return 1
-  fi
-  builtin command "$@"
-}
-'''
 
 
 class InstallerTests(unittest.TestCase):
@@ -34,7 +27,7 @@ class InstallerTests(unittest.TestCase):
             "PATH": str(self.bin) + os.pathsep + os.environ["PATH"],
             "TEST_LOG": str(self.log),
         }
-        for name in ("WSL_DISTRO_NAME", "WSL_INTEROP", "INSTALL_FLUTTER", "INSTALL_FFMPEG", "BASH_ENV",
+        for name in ("WSL_DISTRO_NAME", "WSL_INTEROP", "INSTALL_FLUTTER", "BASH_ENV",
                      "UPGRADE_DESKTOP_APPS", "XDG_CACHE_HOME", "CODEX_HOME"):
             self.env.pop(name, None)
 
@@ -220,54 +213,6 @@ esac
         self.assertIn(f"mise install --cd {self.home} --jobs 1\n", calls)
         self.assertNotIn("npm install -g", calls)
         self.assertNotIn("flutter", calls)
-        self.assertNotIn("ffmpeg", calls)
-
-    def test_main_installs_ffmpeg_only_with_explicit_opt_in(self):
-        self.prepare_install("Linux example microsoft-standard-WSL2")
-        body = '''function setWslIntegration() { :; }
-function setFfmpeg() { echo ffmpeg-setup >> "$TEST_LOG"; }
-main
-'''
-        for value in ("", "0", "yes", "1"):
-            with self.subTest(value=value):
-                self.log.unlink(missing_ok=True)
-                self.run_bash(body, extra_env={"INSTALL_FFMPEG": value})
-                self.assertEqual(self.log.read_text().count("ffmpeg-setup"), int(value == "1"))
-
-    def test_ffmpeg_installs_missing_commands_and_reuses_complete_installation(self):
-        installer = '''printf '%s\\n' "$0 $*" >> "$TEST_LOG"
-for tool in ffmpeg ffprobe; do
-  printf '#!/bin/bash\\n' > "$HOME/commands/$tool"
-  chmod +x "$HOME/commands/$tool"
-done
-'''
-        self.command("sudo", installer)
-        self.command("brew", installer)
-        for kernel, expected in (("Linux example", "sudo apt install --no-install-recommends ffmpeg"),
-                                 ("Darwin example", "brew install ffmpeg")):
-            for existing in ((), ("ffmpeg",), ("ffprobe",), ("ffmpeg", "ffprobe")):
-                with self.subTest(kernel=kernel, existing=existing):
-                    self.log.unlink(missing_ok=True)
-                    for tool in ("ffmpeg", "ffprobe"):
-                        (self.bin / tool).unlink(missing_ok=True)
-                        if tool in existing:
-                            self.command(tool, "exit 0\n")
-                    self.run_bash(FFMPEG_PATH_STUB + 'setOptions\nuname=' + shlex.quote(kernel)
-                                  + '\nsetFfmpeg\nsetFfmpeg\n')
-                    calls = self.log.read_text().splitlines() if self.log.exists() else []
-                    self.assertEqual(len(calls), 0 if len(existing) == 2 else 1)
-                    if calls:
-                        self.assertTrue(calls[0].endswith(expected), calls)
-
-    def test_ffmpeg_failure_or_missing_command_stops_setup(self):
-        for installer, exit_code in (("exit 37\n", 37), ("exit 0\n", 1)):
-            with self.subTest(exit_code=exit_code):
-                self.command("sudo", installer)
-                with self.assertRaises(subprocess.CalledProcessError) as failure:
-                    self.run_bash(FFMPEG_PATH_STUB
-                                  + 'setOptions\nuname="Linux example"\nsetFfmpeg\necho unexpected-success\n')
-                self.assertEqual(failure.exception.returncode, exit_code)
-                self.assertNotIn("unexpected-success", failure.exception.stdout)
 
     def test_wsl_detection_uses_environment_and_kernel_without_affecting_other_platforms(self):
         cases = [
