@@ -20,6 +20,7 @@ class ProjectPresetTests(unittest.TestCase):
         self.dotfiles = self.directory / "dotfiles"
         self.source = self.dotfiles / "src/project-presets/nextjs"
         shutil.copytree(ROOT / "src/project-presets/nextjs", self.source)
+        shutil.copytree(ROOT / "src/project-presets/common", self.source.parent / "common")
         (self.dotfiles / "bin").mkdir()
         self.script = self.dotfiles / "bin/sync-project-presets.py"
         shutil.copy2(ROOT / "bin/sync-project-presets.py", self.script)
@@ -63,6 +64,7 @@ class ProjectPresetTests(unittest.TestCase):
                 inherited = inherited[0]
             self.assertTrue((self.project / inherited).is_file())
         self.assertTrue((self.project / ".editorconfig").is_file())
+        self.assertTrue((self.project / ".gitattributes").is_file())
         self.assertTrue((self.project / "mise.toml").is_file())
         manifest = json.loads((self.destination / "manifest.json").read_text())
         for name, expected in manifest["files"].items():
@@ -102,7 +104,8 @@ class ProjectPresetTests(unittest.TestCase):
     def test_existing_jsonc_and_local_settings_are_preserved(self):
         files = {"biome.jsonc": '// Project override\n{"formatter": {"lineWidth": 100}}\n',
                  "tsconfig.json": '// Keep paths and include\n{"compilerOptions": {}}\n',
-                 ".editorconfig": "root = true\n[*]\nindent_size = 4\n"}
+                 ".editorconfig": "root = true\n[*]\nindent_size = 4\n",
+                 ".gitattributes": "*.md whitespace=-blank-at-eof\n"}
         for name, contents in files.items():
             (self.project / name).write_text(contents, encoding="utf-8")
         result = self.run_sync("--init", "--write")

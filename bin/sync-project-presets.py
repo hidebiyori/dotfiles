@@ -11,6 +11,7 @@ import tempfile
 
 
 SOURCE = Path(__file__).resolve().parents[1] / "src/project-presets/nextjs"
+COMMON = SOURCE.parent / "common/templates"
 DESTINATION = Path("config/presets/nextjs")
 PRESETS = ("biome-next.json", "tsconfig-next.json")
 MANIFEST = "manifest.json"
@@ -106,7 +107,7 @@ def plan(project, initialize):
 
     kept = []
     if initialize:
-        templates = ["biome.json", ".editorconfig", "mise.toml"]
+        templates = ["biome.json", ".editorconfig", ".gitattributes", "mise.toml"]
         if "typescript" in dependencies:
             templates.append("tsconfig.json")
         for name in templates:
@@ -119,7 +120,10 @@ def plan(project, initialize):
             if existing:
                 kept.extend(path.name for path in existing)
             else:
-                changes.append((project / name, (SOURCE / "templates" / name).read_bytes()))
+                common = {".editorconfig": ".editorconfig", ".gitattributes": ".gitattributes",
+                          "mise.toml": "mise-node.toml"}
+                source = COMMON / common[name] if name in common else SOURCE / "templates" / name
+                changes.append((project / name, source.read_bytes()))
     return changes, kept
 
 
