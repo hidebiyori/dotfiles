@@ -159,6 +159,13 @@ fi
         self.command("which", 'exit 1\n')
         return repository
 
+    def test_project_presets_are_not_linked_into_home(self):
+        repository = self.prepare_install("Linux example")
+        self.run_bash('setOptions; setSymbolicLink "$PJ_ROOT/src" "$HOME"')
+        self.assertFalse((self.home / "project-presets").exists())
+        self.assertTrue((self.home / ".bashrc").is_symlink())
+        self.assertTrue((repository / "src/project-presets/nextjs/biome-next.json").is_file())
+
     def test_codex_instructions_copy_to_custom_home(self):
         repository = self.prepare_install("Linux example")
         target = self.home / "custom codex"
