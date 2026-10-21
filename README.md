@@ -67,7 +67,7 @@ Linux のパッケージ管理は apt を使い、WSL では Windows 側の GUI 
 | --- | --- |
 | [Windows / WSL2](docs/windows-setup.md) | 初回導入、オプション、Codex の WSL 設定、エラー時の扱い |
 | [Windows のキー設定](docs/windows-keyboard.md) | 常駐なしの左 Win → Alt、元に戻す方法、Copilot / Fn の制約 |
-| [開発ツール](docs/development-tools.md) | 手動リンクを使う設定、mise / CLI、GitHub 初回認証、Flutter、スキル用 Python |
+| [開発ツール](docs/development-tools.md) | 手動リンクを使う設定、mise / CLI、unzip、GitHub 初回認証、Flutter、スキル用 Python |
 | [Next.js の共通設定](docs/project-presets.md) | Biome / TypeScript の原本・同期、初期テンプレート、プロジェクト固有設定との分担 |
 | [デスクトップアプリ](docs/desktop-apps.md) | OS 別の導入・更新、Chromebook の最大化起動 |
 | [Codex の共通指示とスキル](docs/codex.md) | AGENTS.md の管理場所・同期、共通とプロジェクト固有の分担 |

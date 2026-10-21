@@ -241,7 +241,7 @@ esac
         self.run_bash("main")
         self.assert_common_tools()
         calls = self.log.read_text()
-        self.assertIn("sudo apt install screen ca-certificates curl gh git vim", calls)
+        self.assertIn("sudo apt install screen ca-certificates curl gh unzip git vim", calls)
         self.assertNotIn("fcitx", calls)
         self.assertNotIn("vscode.deb", calls)
         self.assertNotIn("linux-launcher", calls)
@@ -377,7 +377,7 @@ main
 ''')
         self.assert_common_tools()
         calls = self.log.read_text()
-        for expected in ("sudo apt install screen ca-certificates curl gh\n", "japanese", "linux-code",
+        for expected in ("sudo apt install screen ca-certificates curl gh unzip\n", "japanese", "linux-code",
                          "codex-desktop", "linux-launcher"):
             self.assertIn(expected, calls)
         self.assertEqual(os.readlink(self.home / "Downloads"), "/mnt/chromeos/MyFiles/Downloads")
