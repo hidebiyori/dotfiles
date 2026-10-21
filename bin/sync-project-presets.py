@@ -106,11 +106,14 @@ def plan(project, initialize):
 
     kept = []
     if initialize:
-        templates = ["biome.json", ".editorconfig"]
+        templates = ["biome.json", ".editorconfig", "mise.toml"]
         if "typescript" in dependencies:
             templates.append("tsconfig.json")
         for name in templates:
-            alternatives = ("biome.json", "biome.jsonc") if name == "biome.json" else (name,)
+            alternatives = {
+                "biome.json": ("biome.json", "biome.jsonc"),
+                "mise.toml": ("mise.toml", ".mise.toml"),
+            }.get(name, (name,))
             existing = [project / item for item in alternatives
                         if (project / item).exists() or (project / item).is_symlink()]
             if existing:

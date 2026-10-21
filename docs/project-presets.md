@@ -21,6 +21,42 @@ Biome は相対パスと npm パッケージの設定を `extends` で読み込�
 パッケージと Biome 本体は互換性のあるバージョンを明示し、lockfile とともに更新する。
 [Biome の共有設定](https://biomejs.dev/configuration/big-projects/)。
 
+## ディレクトリとコマンドの規約
+
+同じ役割のファイルは次の場所へ置く。利用しないディレクトリを空で作成する必要はない。
+
+```text
+src/
+  app/ または pages/    Next.js のルーティング
+  components/          複数の画面で使う UI
+  lib/                 データ処理・外部サービス等のロジック
+tests/                 自動テスト。必要に応じて components/、lib/ 等に分ける
+scripts/               ビルド・検証・公開・保守の実行スクリプト
+docs/                  開発・操作・公開の詳細手順
+config/
+  presets/nextjs/      コピーした共通プリセットと管理情報
+public/                静的配信するファイル
+mise.toml              プロジェクトのランタイム・ツール指定
+biome.json             共通設定の継承と対象・例外
+tsconfig.json          TypeScript を使う場合の継承とパス設定
+```
+
+新規アプリは `src/app/` を基本にする。既存の Pages Router は `src/pages/` を使い、
+ルーター移行は機能・URL・公開方式の変更を含む別の対応とする。
+共通 UI がまだない場合は `src/components/` を作るためだけにコンポーネントを分割しない。
+本文データや過去の資産等は用途に応じて別ディレクトリを利用できる。
+[Next.js のディレクトリ規約](https://nextjs.org/docs/app/getting-started/project-structure)。
+
+テストは `tests/` に揃える。`test/` や `__tests__/` から移す場合は、npm scripts、
+CI、Biome の対象・例外、TypeScript の include、テストランナーの検出設定、文書の参照を更新する。
+Jest は `__tests__/` のディレクトリ名による自動検出もあるため、テスト数とスナップショットの対応を確認する。
+`scripts/` には、出力の監査など単独で実行する検証コマンドも置ける。
+
+ローカルの `npm test` は用途に合わせて watch を利用できるが、CI の入口は `npm run test:ci` とし、
+watch なしで終了するコマンドを登録する。公開前の型検査・ビルド等は引き続き個別のコマンドで実行する。
+mise 設定の名前は `mise.toml` を基本にし、既存の `.mise.toml` は内容を保って移す。
+既存のバージョン指定や Java 等の追加ツールは維持する。
+
 ## 共通化するもの・各プロジェクトで決めるもの
 
 | 対象 | 共通の既定値・運用 | プロジェクトに残すもの |
@@ -56,10 +92,12 @@ python3 ~/git/dotfiles/bin/sync-project-presets.py /path/to/app --init --write
 ```
 
 通常実行は変更予定の表示だけ。`--write` は共通プリセット2個とハッシュを記録する `manifest.json` を更新する。
-`--init` は、存在しない `biome.json` と `.editorconfig` も作成する。
+`--init` は、存在しない `biome.json`、`.editorconfig`、`mise.toml` も作成する。
 `package.json` の dependencies / devDependencies に TypeScript があれば、存在しない `tsconfig.json` も作成する。
 初期 TypeScript テンプレートは `src/` と `@/*` を想定しているため、構成に合わせて `paths` を調整する。
 Windows ネイティブで Python が導入済みの場合は `python3` の代わりに `py -3` を使える。
+初期 mise 設定は Node 24 系を指定する。既存の `mise.toml` / `.mise.toml` は維持し、
+新しいファイルとの二重配置は行わない。ツールの導入や更新はこのコマンドでは行わない。
 
 既存のルート設定は維持する。`biome.jsonc` がある場合も `biome.json` を新規作成しない。
 既存の設定に、次の継承指定を追加する。
