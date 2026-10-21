@@ -68,7 +68,7 @@ mise 設定の名前は `mise.toml` を基本にし、既存の `.mise.toml` は
 | npm scripts | `dev` / `build` / `check` / `format` / `typecheck` / `test:ci` などの入口を揃える | ビルド前後の処理、実際のテストコマンド。JS のみなら `typecheck` は不要 |
 | テスト | CI は watch なしで終了するコマンドにする | Node test runner / Jest / Vitest、テスト対象、ブラウザ検証の要否 |
 | GitHub Actions | [Node CI の雛形](repository-maintenance.md#node--npm-の-ci)。品質チェックの順序とキャッシュ方針 | 公開ジョブ、認証、権限、成果物、プロジェクト固有の検証 |
-| 依存更新 | [Dependabot の雛形](repository-maintenance.md#依存更新)。週次更新と minor / patch のグループ化 | 更新時期、互換性の制約、メジャー更新の判断 |
+| 依存更新 | [Dependabot の雛形](repository-maintenance.md#依存更新)。自動 PR は停止し、GitHub 側の設定も共通コマンドで確認 | 脆弱性の確認、手動更新と互換性の判断 |
 | Next.js / CSS / UI | 採用する構成の方針や新規作成用テンプレート | `output`、画像、ヘッダー、公開先、Tailwind 等の採用、テーマや画面設計 |
 | 環境変数・作業規則 | `.env.example` は設定名だけを記載。端末共通の規則は dotfiles | 値、秘密情報、サービス名、プロジェクトの `AGENTS.md` |
 
