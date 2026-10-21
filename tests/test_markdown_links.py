@@ -74,11 +74,18 @@ class MarkdownLinkTests(unittest.TestCase):
         self.assertNotIn("private-query", result.stdout + result.stderr)
         self.assertNotIn(str(self.project), result.stdout + result.stderr)
 
-    def test_unresolved_references_fail_but_plain_brackets_are_text(self):
-        self.write("README.md", '[ordinary text]\n[link][undefined]\n')
+    def test_undefined_bracket_pairs_are_plain_text(self):
+        self.write("README.md", '[ordinary text]\n[settings][apply]\n[A][B][C]\n')
         result = self.run_check()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn('"README.md":2:', result.stdout)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("相対リンク 0件", result.stdout)
+
+    def test_an_undefined_pair_can_still_contain_shortcut_links(self):
+        self.write("target.md", "# Target\n")
+        self.write("README.md", '[first][unknown][last]\n\n[first]: target.md\n[last]: missing.md\n')
+        result = self.run_check()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("相対リンク 2件", result.stdout)
         self.assertIn("問題 1件", result.stdout)
 
     def test_parent_links_work_and_escaping_the_repository_fails(self):

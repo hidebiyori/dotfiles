@@ -107,8 +107,12 @@ def links(text):
         elif text[end:end + 1] == "[":
             label = re.match(r"\[([^\]\n]*)\]", text[end:])
             if label:
-                consumed = end + label.end()
-                yield line, definitions.get(reference(label[1] or match[1]))
+                value = definitions.get(reference(label[1] or match[1]))
+                if value is not None:
+                    consumed = end + label.end()
+                    yield line, value
+                elif reference(match[1]) in definitions:
+                    yield line, definitions[reference(match[1])]
         elif reference(match[1]) in definitions:
             yield line, definitions[reference(match[1])]
 
@@ -139,10 +143,6 @@ def check(root):
             text = source.read_text(encoding="utf-8-sig")
             documents += 1
             for line, value in links(text):
-                if value is None:
-                    failures += 1
-                    print(f"{label}:{line}: リンクの参照定義がありません")
-                    continue
                 target = local_path(value)
                 if target is None:
                     continue
