@@ -55,6 +55,59 @@ major は別 PR とし、同時に開く更新 PR は各エコシステムで3�
 既存設定と雛形を比較して対象・更新頻度・例外を各リポジトリで調整する。
 dotfiles 自身には GitHub Actions 用の設定を導入している。
 
+## GitHub 側の Dependabot 設定
+
+通常のバージョン更新 PR は `.github/dependabot.yml` の
+`open-pull-requests-limit: 0` で停止できる。
+セキュリティ更新 PR はこの上限に含まれず、GitHub 側の設定で停止する。
+脆弱性の通知を受ける Dependabot alerts は有効に保ち、修正は手動で確認する。
+
+GitHub CLI (`gh`) で認証済みの環境から、対象を明示して実行する。
+
+```bash
+python3 ~/git/dotfiles/bin/configure-dependabot.py OWNER/REPO
+python3 ~/git/dotfiles/bin/configure-dependabot.py OWNER/REPO --write
+```
+
+通常実行でも API で現在の状態を読み取るが、設定は変更しない。
+`--write` は管理権限を確認した対象1件の Dependabot security updates を無効にし、
+Dependabot alerts を有効にして、反映後の両方の状態を再確認する。
+設定済みなら変更リクエストは送らない。対象は github.com の `OWNER/REPO` に限定し、
+URL・Git remote・全リポジトリ一覧から対象を推測しない。
+fine-grained token を使う場合はリポジトリの Administration の書き込み権限が必要。
+通信は1件ずつ、応答後に最低1秒空け、権限不足・アクセス制限時は再試行せず停止する。
+途中で失敗した場合、設定を自動で巻き戻さず、原因を確認して同じコマンドを再実行する。
+
+使用する公式 API は
+[security updates の確認・停止](https://docs.github.com/en/rest/repos/repos#disable-dependabot-security-updates)と
+[alerts の確認・有効化](https://docs.github.com/en/rest/repos/repos#enable-vulnerability-alerts)。
+依存ファイル・workflow・既存 PR のクローズ・Watch・メール通知設定は変更しない。
+PR を作る auto-triage rules も変更しないので、存在する場合は次の項目で確認する。
+
+## 新規リポジトリ作成時のチェックリスト
+
+- [ ] [初期設定](#改行編集設定)を導入し、用途に応じて Node CI などを選ぶ。
+- [ ] 自動 PR を停止するリポジトリでは、Dependabot の全エコシステムの
+  `open-pull-requests-limit` を `0` にする。既存設定は初期化コマンドで上書きされないため個別に確認する。
+- [ ] `configure-dependabot.py OWNER/REPO --write` を実行し、
+  `security updates=disabled, alerts=enabled` の確認結果を得る。
+- [ ] Settings → Advanced Security → Dependabot rules に、
+  PR を作成する auto-triage rule があれば無効にする。
+  組織が強制するルールは組織管理者へ確認する。
+- [ ] Dependency graph が有効であることを確認する。
+  API を利用できない場合は同じ画面で Dependabot alerts を有効、security updates を無効にする。
+- [ ] メールで受ける場合は Watch → Custom → Security alerts を購読し、
+  個人の通知設定で Dependabot alerts の Email を有効にする。
+- [ ] 差分・必要な検証・CI を確認して、設定をコミットする。
+
+auto-triage rules と通知設定は、このコマンドでは確認・変更できない項目として画面で確認する。
+[PR 作成ルールと security updates の関係](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/manage-your-dependency-security/auto-triage-dependabot-alerts)。
+
+個人アカウントの Settings → Code security では、新規リポジトリ向けの既定値も設定できる。
+Dependabot security updates の自動有効化を不要なら一度見直し、alerts は有効に保つ。
+このアカウント全体の設定はコマンドの対象外とし、作成後は上のコマンドで実際の状態を確認する。
+[アカウント単位の新規リポジトリ設定](https://docs.github.com/en/account-and-profile/how-tos/account-settings/managing-security-and-analysis-features#enabling-or-disabling-features-for-new-repositories)。
+
 ## Node / npm の CI
 
 ```bash
