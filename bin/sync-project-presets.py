@@ -120,8 +120,10 @@ def plan(project, initialize):
             if existing:
                 kept.extend(path.name for path in existing)
             else:
-                source = COMMON if name in (".editorconfig", ".gitattributes") else SOURCE / "templates"
-                changes.append((project / name, (source / name).read_bytes()))
+                common = {".editorconfig": ".editorconfig", ".gitattributes": ".gitattributes",
+                          "mise.toml": "mise-node.toml"}
+                source = COMMON / common[name] if name in common else SOURCE / "templates" / name
+                changes.append((project / name, source.read_bytes()))
     return changes, kept
 
 

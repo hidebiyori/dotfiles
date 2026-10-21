@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -68,6 +69,83 @@ class ProjectConfigTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertNotIn(str(self.directory), result.stdout + result.stderr)
         self.assertFalse(self.project.exists())
+
+    def prepare_node(self, scripts=None):
+        scripts = scripts if scripts is not None else {
+            "check": "node check.js", "test:ci": "node --test", "build": "node build.js"}
+        (self.project / "package.json").write_text(json.dumps({"scripts": scripts}))
+        (self.project / "package-lock.json").write_text('{"lockfileVersion": 3}\n')
+
+    def test_node_profile_creates_ci_and_preserves_mise_version(self):
+        self.prepare_node()
+        original = '[tools]\nnode = "22"\n'
+        (self.project / ".mise.toml").write_text(original)
+        preview = self.run_init("--node")
+        self.assertEqual(preview.returncode, 0, preview.stderr)
+        self.assertFalse((self.project / ".github").exists())
+        result = self.run_init("--node", "--write")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.project / ".github/workflows/check.yml").is_file())
+        self.assertTrue((self.project / ".github/dependabot.yml").is_file())
+        self.assertEqual((self.project / ".mise.toml").read_text(), original)
+        self.assertFalse((self.project / "mise.toml").exists())
+        self.assertFalse((self.project / "node_modules").exists())
+
+    def test_node_profile_requires_ci_scripts_before_any_write(self):
+        self.prepare_node({"test": "node --test"})
+        before = set(self.project.iterdir())
+        result = self.run_init("--node", "--write")
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(set(self.project.iterdir()), before)
+
+    def test_typescript_requires_an_explicit_typecheck(self):
+        self.prepare_node()
+        package = json.loads((self.project / "package.json").read_text())
+        package["devDependencies"] = {"typescript": "5.9.3"}
+        (self.project / "package.json").write_text(json.dumps(package))
+        result = self.run_init("--node", "--write")
+        self.assertEqual(result.returncode, 2)
+        self.assertFalse((self.project / ".github").exists())
+        package["scripts"]["typecheck"] = "tsc --noEmit"
+        (self.project / "package.json").write_text(json.dumps(package))
+        self.assertEqual(self.run_init("--node", "--write").returncode, 0)
+
+    def test_missing_lockfile_is_rejected_without_creating_anything(self):
+        self.prepare_node()
+        (self.project / "package-lock.json").unlink()
+        result = self.run_init("--node", "--write")
+        self.assertEqual(result.returncode, 2)
+        self.assertFalse((self.project / ".editorconfig").exists())
+
+    def test_existing_workflows_and_dependabot_yaml_are_not_duplicated(self):
+        self.prepare_node({})
+        workflows = self.project / ".github/workflows"
+        workflows.mkdir(parents=True)
+        original = "name: custom\n"
+        (workflows / "release.yaml").write_text(original)
+        (workflows.parent / "dependabot.yaml").write_text(original)
+        result = self.run_init("--node", "--write")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((workflows / "release.yaml").read_text(), original)
+        self.assertEqual((workflows.parent / "dependabot.yaml").read_text(), original)
+        self.assertFalse((workflows / "check.yml").exists())
+        self.assertFalse((workflows.parent / "dependabot.yml").exists())
+
+    def test_linked_github_directory_is_rejected_before_any_write(self):
+        outside = self.directory / "hand-managed"
+        outside.mkdir()
+        (self.project / ".github").symlink_to(outside, target_is_directory=True)
+        result = self.run_init("--github-actions", "--write")
+        self.assertEqual(result.returncode, 2)
+        self.assertFalse((self.project / ".editorconfig").exists())
+        self.assertEqual(list(outside.iterdir()), [])
+
+    def test_actions_profile_does_not_require_npm_or_add_node_workflow(self):
+        result = self.run_init("--github-actions", "--write")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.project / ".github/dependabot.yml").is_file())
+        self.assertFalse((self.project / ".github/workflows").exists())
+        self.assertFalse((self.project / "mise.toml").exists())
 
     def test_attributes_normalize_text_and_preserve_binary_data(self):
         self.assertEqual(self.run_init("--write").returncode, 0)
