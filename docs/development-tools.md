@@ -79,6 +79,41 @@ mise 本体の更新は導入元の apt / Homebrew / winget で行う。
 npm 配布の CLI は `npm:<パッケージ名>` を使う。[npm backend](https://mise.jdx.dev/dev-tools/backends/npm.html)を参照。
 プロジェクトの `package.json` にある開発ツールとライブラリは、その依存定義と npm スクリプトで管理する。
 
+## FFmpeg（任意）
+
+動画・音声の変換や実処理テストに `ffmpeg` と `ffprobe` が必要な端末だけ追加する。
+通常のセットアップでは追加しない。一括セットアップと併せて導入する場合:
+
+```bash
+INSTALL_FFMPEG=1 bash ~/git/dotfiles/bin/install.sh
+```
+
+両コマンドが PATH 上にあれば再導入しない。Linux / Chromebook / WSL は apt の `ffmpeg`、
+Mac は [Homebrew の `ffmpeg`](https://formulae.brew.sh/formula/ffmpeg) を使う。
+導入後の更新は、通常の `apt upgrade` / `brew upgrade` に従う。
+Windows / WSL では、ツールを実行する WSL 内へ導入する。
+
+既存環境へ FFmpeg だけを追加する場合は、環境に合うコマンドを実行する。
+Linux / Chromebook / WSL:
+
+```bash
+sudo apt install --no-install-recommends ffmpeg
+```
+
+Mac:
+
+```bash
+brew install ffmpeg
+```
+
+導入後は両コマンドを確認する。必要なコーデック・フィルターと実処理は各プロジェクトで検証する。
+
+```bash
+command -v ffmpeg ffprobe
+ffmpeg -version
+ffprobe -version
+```
+
 ## ZIP の展開・検証（unzip）
 
 Linux / Chromebook / WSL では `bin/install.sh` が apt の共通パッケージとして `unzip` を導入する。
