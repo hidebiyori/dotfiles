@@ -63,7 +63,7 @@ mise 設定の名前は `mise.toml` を基本にし、既存の `.mise.toml` は
 | --- | --- | --- |
 | Biome | スペース2個、80桁、二重引用符、セミコロン、推奨ルールと React / Next ドメイン | 対象ファイル、生成物の除外、個別のルール例外 |
 | TypeScript | `strict`、`noEmit`、bundler 用の解決、JSX、Next プラグイン | `paths`、`include` / `exclude`、`allowJs`、対象環境による `target` の変更 |
-| EditorConfig | UTF-8、LF、最終改行、スペース2個の初期テンプレート | 導入後の `.editorconfig`。継承元の別ファイルは指定できないため、変更は各リポジトリで管理 |
+| EditorConfig / Git 属性 | [共通の初期テンプレート](repository-maintenance.md)。UTF-8、LF、最終改行、スペース2個と拡張子別の例外 | 導入後の `.editorconfig` / `.gitattributes`。変更は各リポジトリで管理 |
 | Node / パッケージ管理 | Node はプロジェクトの mise 設定、開発ツールは `package.json` と lockfile。CI もプロジェクトの指定に合わせる | Node の具体的な版、必要なツール。パッケージ管理ツールの移行は別途判断 |
 | npm scripts | `dev` / `build` / `check` / `format` / `typecheck` / `test:ci` などの入口を揃える | ビルド前後の処理、実際のテストコマンド。JS のみなら `typecheck` は不要 |
 | テスト | CI は watch なしで終了するコマンドにする | Node test runner / Jest / Vitest、テスト対象、ブラウザ検証の要否 |
@@ -92,7 +92,7 @@ python3 ~/git/dotfiles/bin/sync-project-presets.py /path/to/app --init --write
 ```
 
 通常実行は変更予定の表示だけ。`--write` は共通プリセット2個とハッシュを記録する `manifest.json` を更新する。
-`--init` は、存在しない `biome.json`、`.editorconfig`、`mise.toml` も作成する。
+`--init` は、存在しない `biome.json`、`.editorconfig`、`.gitattributes`、`mise.toml` も作成する。
 `package.json` の dependencies / devDependencies に TypeScript があれば、存在しない `tsconfig.json` も作成する。
 初期 TypeScript テンプレートは `src/` と `@/*` を想定しているため、構成に合わせて `paths` を調整する。
 Windows ネイティブで Python が導入済みの場合は `python3` の代わりに `py -3` を使える。
@@ -137,7 +137,7 @@ Biome 本体は各プロジェクトの開発依存でバージョンを固定�
 プロジェクトのディレクトリ構成に依存する項目はルートに置く。
 [TypeScript の extends](https://www.typescriptlang.org/tsconfig/extends.html)。
 
-`.editorconfig` が既にある場合はテンプレートと比較して必要な内容だけ統合する。
+`.editorconfig` / `.gitattributes` が既にある場合はテンプレートと比較して必要な内容だけ統合する。
 初期テンプレートは導入後の更新対象に含めない。
 管理先の途中にリンクがある場合や、コピー済みの共通プリセットが独自に編集されている場合、同期は停止する。
 リンクは利用者の手動配置を維持し、別の場所を使う場合は設定の配置を個別に判断する。
