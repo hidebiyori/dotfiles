@@ -12,7 +12,9 @@ function load()
 }
 
 # disable <C-s>
-stty stop undef
+if [[ -t 0 ]]; then
+  stty stop undef
+fi
 
 # set default permission directory: 755, file: 644
 umask 0022

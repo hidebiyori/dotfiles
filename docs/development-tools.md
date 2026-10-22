@@ -16,6 +16,7 @@ npm と Firebase CLI はそれぞれ独立したツールとして管理する�
 バージョン方針を変える場合はこのファイルを編集する。
 
 `bin/install.sh` は設定を書き換えず、ホームを基準に設定済みツールを導入する。
+設定だけを反映する `u` ではツールを導入せず、共通ツールの更新は `up` で行う。
 実行元プロジェクトの指定や対話シェルの有効化には依存しない。
 プロジェクトでは、そのリポジトリの `mise.toml` を優先する。
 Windows と WSL のツール・依存ディレクトリは別々に扱う。
@@ -65,13 +66,38 @@ Bash 設定全体を Zsh から読み込まない。
 mise install --cd "$HOME" --jobs 1
 ```
 
-共通ツールを明示更新する場合は `mise upgrade --cd "$HOME" --jobs 1`。
+共通ツールだけを明示更新する場合は `mise upgrade --global --jobs 1 --no-prune`。
 Firebase CLI だけなら末尾に `npm:firebase-tools` を加える。
 ツールは mise の個別ディレクトリへ導入し、Node のグローバルパッケージ領域へ直接追加しない。
 既存のグローバル版は自動削除せず、反映後に `command -v firebase` と `mise which firebase` が同じ実体を指すことを確認する。
 プロジェクトで別のバージョンを指定する例は `mise use node@24`。
 設定を確認してから `mise install` し、非対話のスクリプトや CI では `mise exec -- <command>` を使う。
 mise 本体の更新は導入元の apt / Homebrew / winget で行う。
+
+### 共通環境の更新
+
+`u` は `bin/update.sh`、`up` は `bin/upgrade.sh` を呼ぶ。
+前者は設定の同期・反映だけ、後者は設定の同期後に導入済みの共通環境を更新する。
+
+```bash
+u
+up
+```
+
+`up` は Linux / WSL では apt、Mac では Homebrew の formula と導入済みの管理対象 cask、
+続いて mise のグローバル設定のツールを1並列で更新する。WSL では Windows 側の管理対象アプリも更新する。
+不足する mise や Homebrew は自動導入せず、初期セットアップを案内して停止する。
+アプリの不足分、スキル用 Python、Flutter SDK は更新コマンドで新規導入・再作成しない。
+
+mise は `--global` でプロジェクトの設定・環境変数・lockfile を読み込まず、`--bump` も指定しない。
+旧バージョンは `--no-prune` で保持する。Python の `3.14` はその系列内、Node の `lts` と
+npm / Firebase CLI の `latest` はメジャー更新も含む指定なので、追従範囲は共通設定で決める。
+プロジェクトのランタイム指定、npm 依存、Flutter の依存更新は各プロジェクトで実施する。
+通信・権限・更新処理が失敗した場合は停止し、自動で巻き戻さない。
+[mise upgrade](https://mise.jdx.dev/cli/upgrade.html)。
+
+初期セットアップと更新の入口は `bin/`、共有する処理は `lib/install/` の
+`common.sh` / `macos.sh` / `linux.sh` / `wsl.sh` に置く。`src/` はホームに配置する設定を管理する。
 
 [mise の公式手順](https://mise.jdx.dev/installing-mise.html)、[シェルの有効化](https://mise.jdx.dev/cli/activate.html)。
 
