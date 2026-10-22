@@ -20,6 +20,10 @@ screen はホームで対話端末を開いた場合に自動起動する。非�
 空白・改行・先頭の `--` やパターン記法を含む名前もファイル名として扱い、
 追跡済みファイルの変更・削除と、既存のステージ内容は維持する。
 
+`git cl` は現在のブランチを fast-forward 更新した後、マージ済みのローカル作業ブランチを削除する。
+`main`・`master`・`origin/HEAD` で分かる既定ブランチと、worktree で使用中のブランチは維持する。
+削除対象がなくても正常終了し、取得失敗や履歴の分岐があればブランチ削除へ進まない。
+
 ## mise / Python / Node / npm / Firebase CLI
 
 グローバル設定は [`src/.config/mise/config.toml`](../src/.config/mise/config.toml) で管理し、

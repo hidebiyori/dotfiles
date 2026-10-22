@@ -96,5 +96,98 @@ class GitUntrackedAliasTests(unittest.TestCase):
         self.assertEqual(self.staged_names(), ["nested/nested file", "root file"])
 
 
+class GitCleanAliasTests(unittest.TestCase):
+    def setUp(self):
+        self.fixture = git_p_tests.GitPullAliasTests()
+        self.fixture.setUp()
+        self.addCleanup(self.fixture.doCleanups)
+        self.checkout = self.fixture.checkout
+        self.environment = self.fixture.environment
+        (self.fixture.home / "bin/git-cl").symlink_to(ROOT / "src/bin/git-cl")
+        alias = self.fixture.git("config", "--file", ROOT / "src/.config/git/config", "--get", "alias.cl")
+        self.git("config", "alias.cl", alias)
+
+    def git(self, *arguments):
+        return self.fixture.git("-C", self.checkout, *arguments)
+
+    def run_alias(self):
+        return subprocess.run(
+            ["git", "cl"], cwd=self.checkout, env=self.environment,
+            text=True, capture_output=True,
+        )
+
+    def branches(self):
+        return self.git("for-each-ref", "--format=%(refname:short)", "refs/heads").splitlines()
+
+    def checkout_feature(self):
+        self.git("checkout", "-b", "feature")
+        self.git("commit", "--allow-empty", "-m", "Feature fixture")
+        self.git("push", "--set-upstream", "origin", "feature")
+
+    def test_feature_cleanup_preserves_main_master_and_unmerged_branches(self):
+        self.git("branch", "master")
+        self.git("branch", "merged-fixture")
+        self.checkout_feature()
+        self.git("checkout", "-b", "unmerged-fixture")
+        self.git("commit", "--allow-empty", "-m", "Unmerged fixture")
+        self.git("checkout", "feature")
+        result = self.run_alias()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.branches(), ["feature", "main", "master", "unmerged-fixture"])
+        self.assertEqual(self.git("branch", "--show-current"), "feature")
+
+    def test_no_deletion_candidates_is_a_successful_noop(self):
+        result = self.run_alias()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.branches(), ["main"])
+
+    def test_origin_default_branch_with_another_name_is_preserved(self):
+        self.git("branch", "trunk")
+        self.git("push", "origin", "trunk")
+        self.git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk")
+        self.checkout_feature()
+        self.git("branch", "merged-fixture", "main")
+        result = self.run_alias()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.branches(), ["feature", "main", "trunk"])
+
+    def test_a_branch_in_another_worktree_is_preserved_without_stopping_cleanup(self):
+        self.git("branch", "held-fixture")
+        self.git("branch", "merged-fixture")
+        worktree = self.fixture.home / "second worktree"
+        self.git("worktree", "add", worktree, "held-fixture")
+        result = self.run_alias()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.branches(), ["held-fixture", "main"])
+        self.assertEqual(self.fixture.git("-C", worktree, "branch", "--show-current"), "held-fixture")
+
+    def test_failed_pull_does_not_delete_branches(self):
+        self.git("branch", "merged-fixture")
+        self.git("remote", "set-url", "origin", self.fixture.home / "missing.git")
+        result = self.run_alias()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.branches(), ["main", "merged-fixture"])
+
+    def test_divergence_stops_without_rebasing_or_deleting_branches(self):
+        self.git("branch", "merged-fixture")
+        self.git("commit", "--allow-empty", "-m", "Local fixture")
+        previous = self.git("rev-parse", "HEAD")
+        (self.fixture.author / "upstream").write_text("remote work\n")
+        self.fixture.publish()
+        result = self.run_alias()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.git("rev-parse", "HEAD"), previous)
+        self.assertEqual(self.branches(), ["main", "merged-fixture"])
+
+    def test_existing_index_and_unstaged_contents_are_kept(self):
+        (self.checkout / "tracked").write_text("staged work\n")
+        self.git("add", "tracked")
+        (self.checkout / "tracked").write_text("unstaged work\n")
+        result = self.run_alias()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.git("show", ":tracked"), "staged work")
+        self.assertEqual((self.checkout / "tracked").read_text(), "unstaged work\n")
+
+
 if __name__ == "__main__":
     unittest.main()
