@@ -111,7 +111,8 @@ fi
     def test_unrelated_or_missing_origin_stops_without_logging_credentials(self):
         self.git_stub()
         (self.home / "git/dotfiles").mkdir(parents=True)
-        for origin in ("", "https://fixture-secret@example.invalid/another.git?token=fixture-secret#fixture-secret"):
+        for origin in ("", "https://fixture-secret@example.invalid/another.git?token=fixture-secret#fixture-secret",
+                       "https://example.invalid/a@github.com/hidebiyori/dotfiles.git"):
             with self.subTest(missing=not origin):
                 self.log.unlink(missing_ok=True)
                 with self.assertRaises(subprocess.CalledProcessError) as failed:

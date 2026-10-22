@@ -71,7 +71,8 @@ function gitRepositoryIdentity()
     https://*)
       repositoryUrl="${repositoryUrl%%[?#]*}"
       repositoryUrl="${repositoryUrl#https://}"
-      repositoryUrl="https://${repositoryUrl##*@}"
+      local authority="${repositoryUrl%%/*}"
+      repositoryUrl="https://${authority##*@}${repositoryUrl#"${authority}"}"
       ;;
     git@github.com:*) repositoryUrl="https://github.com/${repositoryUrl#git@github.com:}" ;;
     ssh://git@github.com/*) repositoryUrl="https://github.com/${repositoryUrl#ssh://git@github.com/}" ;;
@@ -115,7 +116,8 @@ function setGitRepository()
     if [[ "${repositoryUrl}" == https://* && "${originUrl}" == https://* ]]; then
       local originRepository="${originUrl%%[?#]*}"
       originRepository="${originRepository#https://}"
-      originRepository="https://${originRepository##*@}"
+      local originAuthority="${originRepository%%/*}"
+      originRepository="https://${originAuthority##*@}${originRepository#"${originAuthority}"}"
       if [[ "${originRepository}" != "${originUrl}" ]]; then
         git -C "${targetPath}" remote set-url origin "${originRepository}"
       fi
