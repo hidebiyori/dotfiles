@@ -34,7 +34,8 @@ export AP2_ROOT="${GIT_ROOT}/app02-nextjs"
 export DOT_ROOT="${GIT_ROOT}/dotfiles"
 export DOC_MAIN="${HOME}/var/0001-data/0001-hide/0001-soon"
 alias r="source ${HOME}/.bash_profile"
-alias u="${GIT_ROOT}/dotfiles/bin/install.sh && r"
+alias u='bash "$GIT_ROOT/dotfiles/bin/update.sh" && r'
+alias up='bash "$GIT_ROOT/dotfiles/bin/upgrade.sh" && r'
 alias o="if [[ ! x${TERM} =~ xscreen ]]; then screen -U -D -R; fi"
 alias a="cd ${AP1_ROOT}"
 alias s="cd ${GIT_ROOT}/dotfiles"

@@ -22,7 +22,7 @@ jobs:
           persist-credentials: false
       - name: Shell syntax
         run: |
-          for file in bin/install.sh bin/setup-skill-python.sh src/.bash_profile src/.bashrc src/bin/wsl-browser; do
+          for file in bin/*.sh lib/install/*.sh src/.bash_profile src/.bashrc src/bin/wsl-browser; do
             bash -n "$file" || exit
           done
       - name: Python tests with stubbed installers

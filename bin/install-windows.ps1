@@ -56,7 +56,7 @@ function Invoke-WingetNative {
 }
 
 function Install-WindowsApps {
-    param([switch]$Upgrade, [switch]$IncludeSteam)
+    param([switch]$Upgrade, [switch]$IncludeSteam, [switch]$OnlyInstalled)
     foreach ($app in (Get-ManagedWindowsApps -IncludeSteam:$IncludeSteam)) {
         Write-Host ("Checking {0} ({1})" -f $app.Name, $app.Id)
         $selection = @('--id', $app.Id, '--exact', '--source', $app.Source)
@@ -69,6 +69,10 @@ function Install-WindowsApps {
             }
             $action = 'upgrade'
         } elseif ($queryExit -eq 2316632084L) { # APPINSTALLER_CLI_ERROR_NO_APPLICATIONS_FOUND
+            if ($OnlyInstalled) {
+                Write-Host 'Not installed; use the initial setup to add this app.'
+                continue
+            }
             $action = 'install'
         } else {
             throw ("WinGet could not determine whether {0} is installed (exit {1}); no install attempted." -f $app.Id, $queryExit)

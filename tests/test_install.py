@@ -28,7 +28,7 @@ class InstallerTests(unittest.TestCase):
             "TEST_LOG": str(self.log),
         }
         for name in ("WSL_DISTRO_NAME", "WSL_INTEROP", "INSTALL_FLUTTER", "BASH_ENV",
-                     "UPGRADE_DESKTOP_APPS", "XDG_CACHE_HOME", "CODEX_HOME"):
+                     "XDG_CACHE_HOME", "CODEX_HOME"):
             self.env.pop(name, None)
 
     def command(self, name, contents):
@@ -195,9 +195,14 @@ fi
             "TEST_APPDATA_LINUX": str(appdata),
             "TEST_DOWNLOADS_LINUX": str(downloads),
         })
-        self.command("powershell.exe", '''printf '%s\\r\\n' "$TEST_WINDOWS_APPDATA" "$TEST_WINDOWS_DOWNLOADS"
+        self.command("powershell.exe", '''if [[ "$*" == *-File* ]]; then
+  printf '%s\\n' "windows-upgrade $*" >> "$TEST_LOG"
+  exit "${TEST_WINDOWS_UPGRADE_EXIT:-0}"
+fi
+printf '%s\\r\\n' "$TEST_WINDOWS_APPDATA" "$TEST_WINDOWS_DOWNLOADS"
 ''')
         self.command("wslpath", '''if [[ "${TEST_WSLPATH_FAIL:-0}" == 1 ]]; then exit 1; fi
+if [[ "$1" == -w ]]; then printf '%s\\n' 'C:/fixture/upgrade-windows.ps1'; exit; fi
 case "$2" in
   "$TEST_WINDOWS_APPDATA") printf '%s\\n' "$TEST_APPDATA_LINUX" ;;
   "$TEST_WINDOWS_DOWNLOADS") printf '%s\\n' "$TEST_DOWNLOADS_LINUX" ;;
@@ -405,11 +410,12 @@ main
 main
 ''')
         calls = self.log.read_text()
-        for expected in ("brew update", "brew upgrade", "brew list --versions gh", "defaults write com.apple.screencapture", "skill-python",
+        for expected in ("brew list --formula --versions gh", "defaults write com.apple.screencapture", "skill-python",
                          f"mise install --cd {self.home} --jobs 1\n"):
             self.assertIn(expected, calls)
         self.assertNotIn("sudo", calls)
         self.assertNotIn("linux-launcher", calls)
+        self.assertNotIn("brew upgrade", calls)
         self.assertFalse((self.home / "Downloads").is_symlink())
 
     def test_homebrew_outside_inherited_path_is_reused_on_repeated_runs(self):
@@ -420,7 +426,7 @@ main
         self.command("curl", "exit 99\n")
         for _ in range(3):
             self.run_bash("setOptions; setBrew", extra_env={"PATH": str(self.bin) + ":/usr/bin:/bin"})
-        self.assertEqual(self.log.read_text().splitlines(), ["brew update", "brew upgrade"] * 3)
+        self.assertFalse(self.log.exists())
 
     def test_homebrew_diagnostic_warning_does_not_fail_successful_bootstrap(self):
         self.command("curl", "exit 0\n")
@@ -436,7 +442,7 @@ chmod +x "$HOME/.config/brew/bin/brew"
         result = self.run_bash("setOptions; setBrew", extra_env=environment)
         self.assertIn("brew doctor の案内", result.stderr)
         self.run_bash("setOptions; setBrew", extra_env=environment)
-        self.assertEqual(self.log.read_text().count("brew install --cask google-japanese-ime"), 1)
+        self.assertEqual(self.log.read_text().count("brew doctor"), 1)
 
     def desktop_stubs(self, architecture="amd64"):
         self.command("dpkg", f'printf "%s\\n" "{architecture}"\n')
@@ -472,16 +478,32 @@ if [[ "$1" == list ]]; then exit 1; fi
             self.assertIn("brew install --cask " + cask, calls)
         self.assertNotIn("--cask codex\n", calls)
 
-    def test_macos_keeps_installed_desktop_apps_unless_upgrade_is_explicit(self):
+    def test_macos_setup_keeps_installed_desktop_apps(self):
         self.command("brew", 'printf "%s\\n" "brew $*" >> "$TEST_LOG"\n')
         self.run_bash('setOptions; setMacDesktopApps')
         self.assertNotIn("install --cask", self.log.read_text())
         self.assertNotIn("upgrade", self.log.read_text())
-        self.log.unlink()
-        self.run_bash('setOptions; setMacDesktopApps', extra_env={"UPGRADE_DESKTOP_APPS": "1"})
-        calls = self.log.read_text()
-        for cask in ("chatgpt", "google-chrome", "visual-studio-code"):
-            self.assertIn("brew upgrade --cask --greedy " + cask, calls)
+
+    def test_macos_setup_installs_only_missing_base_packages_with_existing_brew(self):
+        self.command("brew", '''printf '%s\\n' "brew $*" >> "$TEST_LOG"
+if [[ "$1" == list && "${!#}" == jq ]]; then exit 1; fi
+''')
+        self.run_bash('setOptions; setBrew; setMacPackages')
+        installs = [line for line in self.log.read_text().splitlines() if line.startswith("brew install")]
+        self.assertEqual(installs, ["brew install jq"])
+
+    def test_macos_upgrade_updates_formulae_and_only_installed_managed_casks(self):
+        self.command("brew", '''printf '%s\\n' "brew $*" >> "$TEST_LOG"
+if [[ "$1" == list && "${!#}" == visual-studio-code ]]; then exit 1; fi
+''')
+        self.run_bash('setOptions; upgradeMacPackages')
+        calls = self.log.read_text().splitlines()
+        self.assertIn("brew upgrade --formula", calls)
+        for cask in ("chatgpt", "google-chrome", "google-japanese-ime"):
+            self.assertIn("brew upgrade --cask --greedy --no-quit " + cask, calls)
+        self.assertNotIn("brew upgrade --cask --greedy --no-quit visual-studio-code", calls)
+        self.assertNotIn("brew upgrade", calls)
+        self.assertFalse(any(line.startswith("brew install") for line in calls))
 
     def test_macos_preserves_apps_installed_outside_homebrew(self):
         self.command("brew", '''printf '%s\\n' "brew $*" >> "$TEST_LOG"

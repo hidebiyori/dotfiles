@@ -20,7 +20,7 @@ Mac、Chromebook の Linux 開発環境、Windows 11 / WSL2 で使う共通設�
 ## セットアップ
 
 既存の Bash・Git・SSH・Codex・mise・VS Code 設定は管理対象の内容で置き換える。
-残したい設定を退避し、スクリプトを確認してから実行する。パッケージ更新とダウンロードを伴う。
+残したい設定を退避し、スクリプトを確認してから実行する。パッケージの導入・ダウンロードを伴う。
 
 ### Windows 11
 
@@ -47,13 +47,21 @@ less bin/install.sh
 bash bin/install.sh
 ```
 
-ターミナルを開き直すと設定が有効になる。更新・再適用は `u`。
+ターミナルを開き直すと設定が有効になる。設定の更新・再適用は `u`、共通環境の更新は `up`。
 Linux のパッケージ管理は apt を使い、WSL では Windows 側の GUI アプリを利用する。
 
 ## 更新と再実行
 
-- `u` はリポジトリの fast-forward 更新、設定の再適用、OS パッケージと開発ツールの更新を行う。
-  Python / Node / npm / Firebase CLI は [mise の共通設定](src/.config/mise/config.toml)で管理する。
+| 操作 | 内容 |
+| --- | --- |
+| `u` | リポジトリの fast-forward 更新と設定の再適用。ツールの導入・更新は行わない |
+| `up` | 設定を同期してから OS パッケージ・共通開発ツール・導入済みの管理対象アプリを更新 |
+| `bash bin/install.sh` | 初期セットアップ。不足するツールとアプリを導入 |
+
+- alias を使わない場合は `bash ~/git/dotfiles/bin/update.sh` / `bash ~/git/dotfiles/bin/upgrade.sh`。
+  alias の変更はターミナルを開き直すか `r` で反映する。
+- Python / Node / npm / Firebase CLI は [mise の共通設定](src/.config/mise/config.toml)で管理する。
+  `up` はプロジェクトの依存関係を更新しない。詳細は[共通環境の更新](docs/development-tools.md#共通環境の更新)。
 - 同じ設定リンク・コピー・導入済みアプリを再利用する。Downloads / MyDrive の実ディレクトリは維持する。
   Windows / Mac の対象アプリを明示更新する方法は[アプリ管理](docs/desktop-apps.md)を参照する。
 - 通信・権限・検証の失敗時は停止する。原因を解消して再実行する。途中の反映は自動で巻き戻さない。

@@ -25,6 +25,17 @@ Store の ID を含め、製品名から導入 ID を推測しない。
 「導入済み・更新不要」の既知の終了コードは、同じ ID / source の再確認に成功した場合だけ許容する。
 通信・ハッシュ検証・状態確認の失敗は停止する。
 
+導入済みの管理対象アプリだけを更新する場合は、リポジトリの `bin/upgrade-windows.ps1` を使う。
+未導入アプリや WSL・拡張機能の新規導入は行わない。
+WSL の `up` からもこのコマンドを呼ぶ。Windows Update は Windows の設定から実施する。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "\\wsl$\Ubuntu\home\<Linuxユーザー名>\git\dotfiles\bin\upgrade-windows.ps1"
+```
+
+パスは利用するディストリビューション名とユーザー名に合わせる。
+Steam も導入済みなら `-IncludeSteam` を追加して更新できる。WSL の通常の `up` には含めない。
+
 ### Steam（任意）
 
 Windows 版 Steam は `-IncludeSteam` を指定したときだけ、winget の `Valve.Steam` を対象に加える。
@@ -56,15 +67,19 @@ winget list --id Valve.Steam --exact --source winget
 
 ## Mac
 
-`bin/install.sh` の `setMacDesktopApps` が対象 cask を管理する。
+`lib/install/macos.sh` の `setMacDesktopApps` が対象 cask を管理する。
 導入済み cask と `/Applications` / `~/Applications` の手動導入アプリを再利用する。
 Homebrew 管理の対象アプリを明示更新する場合:
 
 ```bash
-UPGRADE_DESKTOP_APPS=1 bash ~/git/dotfiles/bin/install.sh
+up
 ```
 
-通常の一括セットアップとパッケージ更新も行う。手動導入アプリの管理元は変更しない。
+formula と mise の共通ツールも更新する。初期セットアップでは不足分だけ導入し、
+アプリの更新は行わない。更新対象の cask は ChatGPT / Chrome / VS Code / Google 日本語入力で、
+導入済みのものだけ更新する。手動導入アプリの管理元は変更しない。
+`--no-quit` を指定し、更新のために起動中の cask アプリを自動終了しない。
+起動中などの理由で更新できなければ、必要なアプリを自分で閉じてから再実行する。
 
 ## Chromebook / Linux
 

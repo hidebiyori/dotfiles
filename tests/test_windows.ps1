@@ -2,6 +2,7 @@
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '..\bin\install-windows.ps1')
+. (Join-Path $PSScriptRoot '..\bin\upgrade-windows.ps1')
 
 $script:Passed = 0
 $script:OriginalFunctions = @{}
@@ -72,6 +73,47 @@ Test-Case 'Installed apps are not reinstalled' {
     Assert-True ($script:Calls.Count -eq 4) 'Only four list queries expected.'
     Assert-True (@($script:Calls | Where-Object { -not $_.StartsWith('list ') }).Count -eq 0) 'Unexpected install or upgrade.'
     Assert-True (($script:Calls -join ' ') -notlike '*Valve.Steam*') 'Steam must be explicitly selected even when installed.'
+}
+
+Test-Case 'Upgrade-only mode skips missing apps without installing them' {
+    Set-Mock 'Invoke-WingetNative' {
+        param([string[]]$CommandArguments)
+        $script:Calls.Add(($CommandArguments -join ' '))
+        if ($CommandArguments[0] -eq 'list' -and $CommandArguments[2] -ne 'GitHub.cli') {
+            return 2316632084L
+        }
+        return 0
+    }
+    Install-WindowsApps -Upgrade -OnlyInstalled -IncludeSteam
+    $updates = @($script:Calls | Where-Object { $_.StartsWith('upgrade ') })
+    Assert-True ($updates.Count -eq 1 -and $updates[0] -like '*GitHub.cli*') 'Only the installed app should upgrade.'
+    Assert-True (@($script:Calls | Where-Object { $_.StartsWith('install ') }).Count -eq 0) 'No missing app should be installed.'
+}
+
+Test-Case 'Windows upgrade entry point does not run WSL or extension setup' {
+    Set-Mock 'Assert-WindowsHost' {
+        param([switch]$OnlyApps)
+        Assert-True $OnlyApps 'Expected an app-only host check.'
+    }
+    Set-Mock 'Install-WindowsApps' {
+        param([switch]$Upgrade, [switch]$OnlyInstalled, [switch]$IncludeSteam)
+        Assert-True ($Upgrade -and $OnlyInstalled) 'Expected an installed-only upgrade.'
+        Assert-True (-not $IncludeSteam) 'Steam should remain opt-in.'
+        $script:Calls.Add('installed-only-upgrade')
+    }
+    Set-Mock 'Install-WslExtension' { throw 'Unexpected extension setup.' }
+    Set-Mock 'Initialize-Wsl' { throw 'Unexpected WSL setup.' }
+    Invoke-WindowsUpgrade
+    Assert-True ($script:Calls.Count -eq 1) 'Expected only the app upgrade.'
+}
+
+Test-Case 'Windows upgrade only includes Steam when requested' {
+    Set-Mock 'Assert-WindowsHost' { param([switch]$OnlyApps) }
+    Set-Mock 'Install-WindowsApps' {
+        param([switch]$Upgrade, [switch]$OnlyInstalled, [switch]$IncludeSteam)
+        Assert-True ($Upgrade -and $OnlyInstalled -and $IncludeSteam) 'Expected explicit Steam upgrade.'
+    }
+    Invoke-WindowsUpgrade -IncludeSteam
 }
 
 Test-Case 'Opt-in Steam installs once and is kept on rerun' {
