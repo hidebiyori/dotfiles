@@ -11,6 +11,21 @@ function load()
   fi
 }
 
+function __dotfiles_deduplicate_path()
+{
+  local remaining="${PATH-}" entry unique='' separator=''
+  while :; do
+    entry="${remaining%%:*}"
+    if [[ -z "${separator}" || ":${unique}:" != *":${entry}:"* ]]; then
+      unique="${unique}${separator}${entry}"
+      separator=':'
+    fi
+    [[ "${remaining}" == *:* ]] || break
+    remaining="${remaining#*:}"
+  done
+  export PATH="${unique}"
+}
+
 # disable <C-s>
 if [[ -t 0 ]]; then
   stty stop undef
@@ -48,4 +63,6 @@ export FLUTTER_DIR="${HOME}/.config/flutter"
 export PATH="${FLUTTER_DIR}/bin:${PATH}"
 
 export PATH="${HOME}/bin:${PATH}"
+# Keep the first occurrence, including one explicit empty entry, before child shells start.
+__dotfiles_deduplicate_path
 load "${HOME}/.bashrc"
