@@ -63,10 +63,15 @@ class InstallerTests(unittest.TestCase):
 
     def git_stub(self):
         self.command("git", '''printf '%s\\n' "$*" >> "$TEST_LOG"
-if [[ "$*" == *"config --get remote.origin.url" ]]; then
-  printf '%s\\n' "${TEST_ORIGIN_URL:-}"
+if [[ "$*" == *"rev-parse --show-toplevel" ]]; then
+  if [[ "${TEST_ROOT_FAIL:-0}" == 1 ]]; then exit 7; fi
+  if [[ -n "${TEST_GIT_ROOT:-}" ]]; then printf '%s\\n' "$TEST_GIT_ROOT"; else (cd -- "$2" && pwd -P); fi
+elif [[ "$*" == *"config --get remote.origin.url" ]]; then
+  printf '%s\\n' "${TEST_ORIGIN_URL-@@PUBLIC_URL@@}"
+elif [[ "$*" == *"pull --ff-only" ]]; then
+  exit "${TEST_PULL_EXIT:-0}"
 fi
-''')
+'''.replace('@@PUBLIC_URL@@', PUBLIC_URL))
 
     def test_clone_ignores_token_and_disables_inherited_tracing(self):
         self.git_stub()
@@ -79,27 +84,55 @@ fi
     def test_legacy_origin_authentication_is_removed_before_pull(self):
         self.git_stub()
         (self.home / "git/dotfiles").mkdir(parents=True)
-        for legacy in (
-            "https://synthetic-test-credential@github.com/hidebiyori/dotfiles.git",
-            PUBLIC_URL + "?token=synthetic-test-credential#fragment",
+        for legacy, public in (
+            ("https://synthetic-test-credential@github.com/hidebiyori/dotfiles.git", PUBLIC_URL),
+            (PUBLIC_URL + "?token=synthetic-test-credential#fragment", PUBLIC_URL),
+            ("https://synthetic-test-credential@github.com/hidebiyori/dotfiles?token=synthetic-test-credential", PUBLIC_URL[:-4]),
         ):
             with self.subTest(kind="userinfo" if "@" in legacy else "query"):
                 self.log.unlink(missing_ok=True)
                 result = self.run_bash('setOptions; setGitRepository "$PJ_URL"', trace=True,
                                        extra_env={"TEST_ORIGIN_URL": legacy})
                 calls = self.log.read_text()
-                self.assertLess(calls.index("remote set-url origin " + PUBLIC_URL),
+                self.assertLess(calls.index("remote set-url origin " + public),
                                 calls.index(" pull"))
                 self.assertNotIn("synthetic-test-credential", result.stdout + result.stderr + calls)
 
     def test_ssh_origin_is_preserved(self):
         self.git_stub()
         (self.home / "git/dotfiles").mkdir(parents=True)
-        self.run_bash('setOptions; setGitRepository "$PJ_URL"', extra_env={
-            "TEST_ORIGIN_URL": "git@github.com:hidebiyori/dotfiles.git",
-        })
+        for origin in ("git@github.com:hidebiyori/dotfiles.git",
+                       "ssh://git@github.com/hidebiyori/dotfiles.git",
+                       "https://github.com/hidebiyori/dotfiles"):
+            self.run_bash('setOptions; setGitRepository "$PJ_URL"', extra_env={"TEST_ORIGIN_URL": origin})
         self.assertNotIn("set-url", self.log.read_text())
         self.assertIn(" pull", self.log.read_text())
+
+    def test_unrelated_or_missing_origin_stops_without_logging_credentials(self):
+        self.git_stub()
+        (self.home / "git/dotfiles").mkdir(parents=True)
+        for origin in ("", "https://fixture-secret@example.invalid/another.git?token=fixture-secret#fixture-secret",
+                       "https://example.invalid/a@github.com/hidebiyori/dotfiles.git"):
+            with self.subTest(missing=not origin):
+                self.log.unlink(missing_ok=True)
+                with self.assertRaises(subprocess.CalledProcessError) as failed:
+                    self.run_bash('setOptions; setGitRepository "$PJ_URL"', trace=True,
+                                  extra_env={"TEST_ORIGIN_URL": origin})
+                output = failed.exception.stdout + failed.exception.stderr + self.log.read_text()
+                self.assertNotIn("fixture-secret", output)
+                self.assertNotIn(" pull", self.log.read_text())
+                self.assertNotIn("set-url", self.log.read_text())
+
+    def test_parent_repository_or_unreadable_root_stops_before_pull(self):
+        self.git_stub()
+        (self.home / "git/dotfiles").mkdir(parents=True)
+        for overrides in ({"TEST_GIT_ROOT": str(self.home)}, {"TEST_ROOT_FAIL": "1"}):
+            with self.subTest(overrides=list(overrides)):
+                self.log.unlink(missing_ok=True)
+                with self.assertRaises(subprocess.CalledProcessError):
+                    self.run_bash('setOptions; setGitRepository "$PJ_URL"', extra_env=overrides)
+                self.assertNotIn("config --get remote.origin.url", self.log.read_text())
+                self.assertNotIn(" pull", self.log.read_text())
 
     def test_repository_can_be_reapplied_and_updated_without_merging_divergence(self):
         def git(*arguments, cwd=None):
@@ -145,6 +178,9 @@ fi
         repository = self.home / "git/dotfiles"
         (repository / "bin").mkdir(parents=True)
         shutil.copytree(ROOT / "src", repository / "src")
+        shutil.copytree(ROOT / "lib", repository / "lib")
+        for entrypoint in ("install.sh", "update.sh", "upgrade.sh"):
+            shutil.copy2(ROOT / "bin" / entrypoint, repository / "bin" / entrypoint)
         (repository / "bin/setup-skill-python.sh").write_text(
             'printf "%s\\n" skill-python >> "$TEST_LOG"\n')
         (repository / "bin/setup-chatgpt-maximized.py").write_text(
