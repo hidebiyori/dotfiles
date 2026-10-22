@@ -7,6 +7,9 @@
 参照先の取得・作成は利用者が行う。dotfiles の整理・公開情報の見直し・ツール管理の変更だけを理由に、
 これらのパスや関連設定を変更・削除・改名しない。変更するのは利用者が明示的に指定した場合に限る。
 
+`r` で設定を再読み込みしても履歴の同期処理は重複登録しない。
+既存の `PROMPT_COMMAND` が文字列または配列の場合も、登録済みの処理を保つ。
+
 ## mise / Python / Node / npm / Firebase CLI
 
 グローバル設定は [`src/.config/mise/config.toml`](../src/.config/mise/config.toml) で管理し、

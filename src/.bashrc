@@ -14,8 +14,29 @@ shopt -s histreedit
 shopt -s histverify
 shopt -s cmdhist
 shopt -s lithist
+
+function __dotfiles_set_history_prompt()
+{
+  local historyCommands='history -a; history -c; history -r;'
+  local prompt="${PROMPT_COMMAND-}" existing
+  # Collapse the prefixes added by earlier reloads without changing custom hooks.
+  while [[ "${prompt}" == "${historyCommands}"* ]]; do
+    prompt="${prompt#"${historyCommands}"}"
+    prompt="${prompt# }"
+  done
+  # Scalar assignment also preserves the other entries of an indexed array.
+  PROMPT_COMMAND="${prompt}"
+  for existing in "${PROMPT_COMMAND[@]}"; do
+    if [[ "${existing}" == *"${historyCommands}"* ]]; then
+      return
+    fi
+  done
+  PROMPT_COMMAND="${historyCommands}${prompt:+ ${prompt}}"
+}
+
 if [ -s "${HOME}/.bash_history" ]; then
-  export PROMPT_COMMAND="history -a; history -c; history -r; ${PROMPT_COMMAND}"
+  __dotfiles_set_history_prompt
+  export PROMPT_COMMAND
 fi
 
 GIT_PS1_SHOWDIRTYSTATE=1
