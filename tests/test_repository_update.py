@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+import shlex
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -89,6 +91,69 @@ class RepositoryUpdateTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((linked / "marker").read_text(), "second")
         self.assertEqual(linked.lstat().st_ino, inode)
+
+    def assert_fetched_code_is_used(self, entrypoint):
+        shutil.copytree(ROOT / "lib", self.author / "lib")
+        (self.author / "bin").mkdir()
+        shutil.copy2(ROOT / "bin" / entrypoint, self.author / "bin" / entrypoint)
+        (self.author / "src").mkdir()
+        (self.author / "src/settings.txt").write_text("first settings")
+        common = self.author / "lib/install/common.sh"
+        common.write_text(common.read_text() + '''
+function detectPlatform() { uname="Linux fixture"; }
+function applyPlatformSettings() { printf '%s\\n' helper-v1; }
+''')
+        self.create_checkout()
+        common.write_text(common.read_text().replace("helper-v1", "helper-v2"))
+        fetched_entry = self.author / "bin" / entrypoint
+        fetched_entry.write_text(fetched_entry.read_text() + '''
+function main()
+{
+  setOptions
+  detectPlatform
+  syncConfiguration
+  applyPlatformSettings
+  printf '%s\\n' entry-v2
+}
+''')
+        (self.author / "src/settings.txt").write_text("second settings")
+        self.publish()
+
+        commands = self.scratch / "commands"
+        commands.mkdir()
+        git_executable = shlex.quote(shutil.which("git"))
+        (commands / "git").write_text('''#!/bin/bash
+for argument in "$@"; do
+  if [[ "$argument" == pull ]]; then printf '%s\\n' pull >> "$TEST_PULL_LOG"; break; fi
+done
+exec ''' + git_executable + ' "$@"\n')
+        # A regression must never start a real package manager or download.
+        for name in ("sudo", "brew", "mise", "curl", "fcitx-autostart", "fcitx-configtool"):
+            (commands / name).write_text('#!/bin/bash\necho "Unexpected installer" >&2\nexit 99\n')
+        for command in commands.iterdir():
+            command.chmod(0o755)
+        pull_log = self.scratch / "pull.log"
+        result = subprocess.run(
+            ["bash", str(self.checkout / "bin" / entrypoint)],
+            env={**self.environment, "PATH": str(commands) + os.pathsep + os.environ["PATH"],
+                 "TEST_PULL_LOG": str(pull_log)},
+            capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("entry-v2", result.stdout)
+        self.assertIn("helper-v2", result.stdout)
+        self.assertNotIn("helper-v1", result.stdout)
+        self.assertEqual((self.fixture_home / "settings.txt").read_text(), "second settings")
+        self.assertEqual(pull_log.read_text().splitlines(), ["pull"])
+
+    def test_settings_update_uses_fetched_entrypoint_and_helpers_immediately(self):
+        self.assert_fetched_code_is_used("update.sh")
+
+    def test_upgrade_uses_fetched_entrypoint_and_helpers_immediately(self):
+        self.assert_fetched_code_is_used("upgrade.sh")
+
+    def test_setup_uses_fetched_entrypoint_and_helpers_immediately(self):
+        self.assert_fetched_code_is_used("install.sh")
 
 
 if __name__ == "__main__":

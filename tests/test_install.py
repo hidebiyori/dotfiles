@@ -68,6 +68,8 @@ if [[ "$*" == *"rev-parse --show-toplevel" ]]; then
   if [[ -n "${TEST_GIT_ROOT:-}" ]]; then printf '%s\\n' "$TEST_GIT_ROOT"; else (cd -- "$2" && pwd -P); fi
 elif [[ "$*" == *"config --get remote.origin.url" ]]; then
   printf '%s\\n' "${TEST_ORIGIN_URL-@@PUBLIC_URL@@}"
+elif [[ "$*" == *"pull --ff-only" ]]; then
+  exit "${TEST_PULL_EXIT:-0}"
 fi
 '''.replace('@@PUBLIC_URL@@', PUBLIC_URL))
 
@@ -175,6 +177,9 @@ fi
         repository = self.home / "git/dotfiles"
         (repository / "bin").mkdir(parents=True)
         shutil.copytree(ROOT / "src", repository / "src")
+        shutil.copytree(ROOT / "lib", repository / "lib")
+        for entrypoint in ("install.sh", "update.sh", "upgrade.sh"):
+            shutil.copy2(ROOT / "bin" / entrypoint, repository / "bin" / entrypoint)
         (repository / "bin/setup-skill-python.sh").write_text(
             'printf "%s\\n" skill-python >> "$TEST_LOG"\n')
         (repository / "bin/setup-chatgpt-maximized.py").write_text(

@@ -27,10 +27,20 @@ function detectPlatform()
   fi
 }
 
+function runUpdatedCommand()
+{
+  local entrypoint="${1:?}"
+  shift
+  setOptions
+  detectPlatform
+  setGitRepository "${PJ_URL}"
+  # Source the fetched entry point in a fresh shell without running its bootstrap twice.
+  exec bash -c 'source "$1" || exit; shift; main "$@"' bash "${PJ_ROOT}/bin/${entrypoint}" "$@"
+}
+
 function syncConfiguration()
 {
   setDirectories
-  setGitRepository "${PJ_URL}"
   setSymbolicLink "${PJ_ROOT}/src" "${HOME}"
   setCodexInstructions
 }

@@ -1,4 +1,3 @@
-import shutil
 import subprocess
 import unittest
 
@@ -89,8 +88,6 @@ class UpdateUpgradeTests(unittest.TestCase):
 
     def test_missing_helper_stops_before_settings_or_package_changes(self):
         repository = self.fixture.prepare_install("Linux generic")
-        shutil.copytree(ROOT / "lib", repository / "lib")
-        shutil.copy2(ROOT / "bin/update.sh", repository / "bin/update.sh")
         (repository / "lib/install/wsl.sh").unlink()
         result = subprocess.run(
             ["bash", str(repository / "bin/update.sh")], cwd=self.fixture.home,
@@ -102,9 +99,6 @@ class UpdateUpgradeTests(unittest.TestCase):
 
     def test_aliases_route_settings_and_upgrades_to_separate_scripts(self):
         repository = self.fixture.prepare_install("Linux generic")
-        shutil.copytree(ROOT / "lib", repository / "lib")
-        for name in ("update.sh", "upgrade.sh"):
-            shutil.copy2(ROOT / "bin" / name, repository / "bin" / name)
         project = self.fixture.home / "project"
         project.mkdir()
         result = subprocess.run(
@@ -127,6 +121,14 @@ up
         self.assertIn("sudo apt upgrade", upgrades)
         self.assertIn("mise upgrade --global", upgrades)
         self.assertEqual(self.fixture.log.read_text().count("reloaded\n"), 2)
+
+    def test_failed_pull_does_not_apply_settings_or_upgrade_packages(self):
+        self.fixture.prepare_install("Linux generic")
+        result = self.run_entrypoint("upgrade.sh", {"TEST_PULL_EXIT": "11"}, check=False)
+        self.assertEqual(result.returncode, 11)
+        self.assertFalse((self.fixture.home / ".bashrc").exists())
+        for forbidden in ("sudo ", "mise ", "linux-launcher"):
+            self.assertNotIn(forbidden, self.fixture.log.read_text())
 
 
 if __name__ == "__main__":
