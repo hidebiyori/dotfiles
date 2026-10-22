@@ -60,7 +60,7 @@
   ss = stash show
   sp = stash push --include-untracked -m "$(date '+%Y%m%d-%H%M%S')"
 
-  ua = !git ls-files --others --exclude-standard | xargs git add
+  ua = "!bash \"$HOME/bin/git-ua\""
   uc = clean -i
   cl = !git pull && git branch --merged | grep -v '*' | xargs git branch -d
 
