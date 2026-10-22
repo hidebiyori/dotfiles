@@ -60,9 +60,9 @@
   ss = stash show
   sp = stash push --include-untracked -m "$(date '+%Y%m%d-%H%M%S')"
 
-  ua = !git ls-files --others --exclude-standard | xargs git add
+  ua = "!bash \"$HOME/bin/git-ua\""
   uc = clean -i
-  cl = !git pull && git branch --merged | grep -v '*' | xargs git branch -d
+  cl = "!bash \"$HOME/bin/git-cl\""
 
   l  = ls --graph
   ls = log --pretty=format:'%ai %h %s: %an%C(red)%d%C(reset)' -n 24 --reverse

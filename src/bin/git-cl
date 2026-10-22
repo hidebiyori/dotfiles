@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+git pull --ff-only
+
+defaultBranch="$(git symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null || true)"
+defaultBranch="${defaultBranch#refs/remotes/origin/}"
+
+# Omit branches checked out in any worktree without printing their local paths.
+mergedBranches="$(git for-each-ref --merged=HEAD \
+  --format='%(if)%(worktreepath)%(then)%(else)%(refname:strip=2)%(end)' refs/heads/)"
+while IFS= read -r branch; do
+  case "${branch}" in
+    ''|main|master) continue ;;
+  esac
+  if [[ "${branch}" == "${defaultBranch}" ]]; then
+    continue
+  fi
+  git branch -d -- "${branch}"
+done <<< "${mergedBranches}"

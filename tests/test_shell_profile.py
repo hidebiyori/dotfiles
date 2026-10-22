@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -81,6 +82,64 @@ class ShellProfileTests(unittest.TestCase):
     def test_interactive_terminal_outside_home_does_not_start_screen(self):
         self.run_profile(arguments=("-i",), terminal=True, cwd=self.home.parent)
         self.assertFalse(self.log.exists())
+
+
+class PathReloadTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="dotfiles-path-")
+        self.addCleanup(temporary.cleanup)
+        self.home = Path(temporary.name) / "home"
+        self.home.mkdir()
+        (self.home / ".bash_profile").symlink_to(PROFILE)
+        (self.home / ".bashrc").symlink_to(BASHRC)
+        self.environment = {**os.environ, "HOME": str(self.home), "TERM": "xterm"}
+        self.environment.pop("BASH_ENV", None)
+        self.prefix = [str(self.home / "bin"), str(self.home / ".config/flutter/bin"),
+                       "/usr/local/bin", "/usr/sbin", "/usr/bin", "/bin"]
+
+    def reload_paths(self, initial, unset=False):
+        body = '''
+function uname() { printf '%s\\n' 'Linux fixture'; }
+function __git_ps1() { :; }
+if [[ "$3" == unset ]]; then unset PATH; else PATH="$2"; fi
+source "$1"
+printf '%s\\0' "$PATH"
+shopt -s expand_aliases
+r
+printf '%s\\0' "$PATH"
+r
+printf '%s\\0' "$PATH"
+'''
+        result = subprocess.run(
+            [shutil.which("bash"), "--noprofile", "--norc", "-uec", body,
+             "bash", str(PROFILE), initial, "unset" if unset else "set"],
+            cwd=self.home.parent, env=self.environment, capture_output=True, text=True, timeout=10,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stderr, "")
+        paths = [value.split(":") for value in result.stdout.removesuffix("\0").split("\0")]
+        self.assertEqual(len(paths), 3)
+        self.assertEqual(paths[0], paths[1])
+        self.assertEqual(paths[1], paths[2])
+        return paths[0]
+
+    def test_reloads_keep_priority_and_collapse_existing_duplicates(self):
+        initial = "/custom/one:/usr/bin:/custom/two:/usr/bin:/bin:/custom/one"
+        self.assertEqual(self.reload_paths(initial), self.prefix + ["/custom/one", "/custom/two"])
+
+    def test_explicit_empty_entries_keep_their_position_once(self):
+        self.assertEqual(self.reload_paths(":/custom/one::/bin:"), self.prefix + ["", "/custom/one"])
+
+    def test_relative_paths_spaces_and_glob_characters_are_literal(self):
+        initial = "relative bin:/custom/[abc]*:$LITERAL_DIR/one:relative bin:/custom/[abc]*"
+        expected = self.prefix + ["relative bin", "/custom/[abc]*", "$LITERAL_DIR/one"]
+        self.assertEqual(self.reload_paths(initial), expected)
+
+    def test_empty_path_adds_managed_paths_without_inserting_current_directory(self):
+        self.assertEqual(self.reload_paths(""), self.prefix)
+
+    def test_unset_path_is_supported_with_nounset(self):
+        self.assertEqual(self.reload_paths("", unset=True), self.prefix)
 
 
 class HistoryPromptTests(unittest.TestCase):

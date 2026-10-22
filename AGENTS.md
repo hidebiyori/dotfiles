@@ -15,7 +15,7 @@
 - 検証のために一括セットアップを実行しない。外部コマンドをスタブ化した既存テストを使う。
 
 ```bash
-for file in bin/*.sh lib/install/*.sh src/.bash_profile src/.bashrc src/bin/git-p src/bin/wsl-browser; do
+for file in bin/*.sh lib/install/*.sh src/.bash_profile src/.bashrc src/bin/git-* src/bin/wsl-browser; do
   bash -n "$file" || exit
 done
 python3 -B -m unittest discover -s tests -v

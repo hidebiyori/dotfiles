@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# File names are literal pathspecs, never shell words, Git options, or patterns.
+git ls-files --others --exclude-standard -z |
+  git --literal-pathspecs add --pathspec-from-file=- --pathspec-file-nul
