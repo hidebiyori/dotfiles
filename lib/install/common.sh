@@ -54,21 +54,60 @@ function isWsl()
     [[ -n "${WSL_DISTRO_NAME:-}" || -n "${WSL_INTEROP:-}" || "${kernel}" == *[Mm]icrosoft* || "${kernel}" == *WSL* ]]
 }
 
+function gitRepositoryIdentity()
+{
+  local repositoryUrl="${1:?}"
+  case "${repositoryUrl}" in
+    https://*)
+      repositoryUrl="${repositoryUrl%%[?#]*}"
+      repositoryUrl="${repositoryUrl#https://}"
+      repositoryUrl="https://${repositoryUrl##*@}"
+      ;;
+    git@github.com:*) repositoryUrl="https://github.com/${repositoryUrl#git@github.com:}" ;;
+    ssh://git@github.com/*) repositoryUrl="https://github.com/${repositoryUrl#ssh://git@github.com/}" ;;
+  esac
+  if [[ "${repositoryUrl}" == https://github.com/* ]]; then
+    repositoryUrl="${repositoryUrl%.git}"
+  fi
+  printf '%s' "${repositoryUrl}"
+}
+
 function setGitRepository()
 {
   local repositoryUrl="${1:?}"
-  local repositoryName="$(echo ${repositoryUrl##*/} | sed 's/.git//g')"
+  local repositoryName="${repositoryUrl##*/}"
+  repositoryName="${repositoryName%.git}"
   local targetPath="${2:-${GIT_ROOT}/${repositoryName}}"
 
-  if [ -d "${targetPath}" ]; then
+  if [[ -e "${targetPath}" || -L "${targetPath}" ]]; then
+    local checkoutRoot targetRoot
+    if [[ ! -d "${targetPath}" ]] ||
+       ! checkoutRoot="$(git -C "${targetPath}" rev-parse --show-toplevel 2>/dev/null)"; then
+      echo 'Git: 指定先は既存のチェックアウトではありません。変更せず停止します。' >&2
+      return 1
+    fi
+    targetRoot="$(cd -- "${targetPath}" && pwd -P)" || return
+    checkoutRoot="$(cd -- "${checkoutRoot}" && pwd -P)" || return
+    if [[ "${checkoutRoot}" != "${targetRoot}" ]]; then
+      echo 'Git: 指定先はチェックアウトのルートではありません。変更せず停止します。' >&2
+      return 1
+    fi
     local originUrl
-    originUrl="$(git -C "${targetPath}" config --get remote.origin.url || true)"
+    if ! originUrl="$(git -C "${targetPath}" config --get remote.origin.url 2>/dev/null)" ||
+       [[ -z "${originUrl}" ]]; then
+      echo 'Git: origin を確認できないため更新を停止します。' >&2
+      return 1
+    fi
+    if [[ "$(gitRepositoryIdentity "${originUrl}")" != "$(gitRepositoryIdentity "${repositoryUrl}")" ]]; then
+      echo 'Git: origin が想定したリポジトリと異なるため、変更せず停止します。' >&2
+      return 1
+    fi
     if [[ "${repositoryUrl}" == https://* && "${originUrl}" == https://* ]]; then
       local originRepository="${originUrl%%[?#]*}"
       originRepository="${originRepository#https://}"
       originRepository="https://${originRepository##*@}"
-      if [[ "${originRepository}" == "${repositoryUrl}" && "${originUrl}" != "${repositoryUrl}" ]]; then
-        git -C "${targetPath}" remote set-url origin "${repositoryUrl}"
+      if [[ "${originRepository}" != "${originUrl}" ]]; then
+        git -C "${targetPath}" remote set-url origin "${originRepository}"
       fi
     fi
     git -C "${targetPath}" pull --ff-only
