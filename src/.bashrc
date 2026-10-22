@@ -121,6 +121,6 @@ if [[ $- == *i* ]]; then
 fi
 
 ### Common ###
-if [ "${PWD}" = "${HOME}" ]; then
+if [[ $- == *i* && -t 0 && -t 1 && "${PWD}" == "${HOME}" ]]; then
   o
 fi

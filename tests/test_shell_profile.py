@@ -10,17 +10,77 @@ BASHRC = PROFILE.with_name(".bashrc")
 
 
 class ShellProfileTests(unittest.TestCase):
-    def test_profile_without_terminal_does_not_interrupt_commands(self):
-        with tempfile.TemporaryDirectory(prefix="dotfiles profile ") as temporary:
-            result = subprocess.run(
-                ["bash", "--noprofile", "--norc", "-e", "-c",
-                 'source "$1"; printf command-reached', "bash", str(PROFILE)],
-                cwd=temporary, env={**os.environ, "HOME": temporary},
-                stdin=subprocess.DEVNULL, capture_output=True, text=True,
-            )
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="dotfiles profile ")
+        self.addCleanup(temporary.cleanup)
+        self.home = Path(temporary.name)
+        (self.home / ".bashrc").symlink_to(BASHRC)
+        (self.home / "bin").mkdir()
+        self.log = self.home / "screen.log"
+        screen = self.home / "bin/screen"
+        screen.write_text('#!/bin/bash\nprintf "%s\\n" "$*" >> "$TEST_SCREEN_LOG"\n')
+        screen.chmod(0o755)
+        mise = self.home / "bin/mise"
+        mise.write_text("#!/bin/bash\nexit 0\n")
+        mise.chmod(0o755)
+        self.environment = {
+            **os.environ, "HOME": str(self.home), "TERM": "xterm",
+            "TEST_SCREEN_LOG": str(self.log),
+        }
+        self.environment.pop("BASH_ENV", None)
+
+    def run_profile(self, arguments=(), terminal=False, cwd=None, term="xterm"):
+        command = ["bash", "--noprofile", "--norc", *arguments, "-e", "-c",
+                   'source "$1"; printf command-reached', "bash", str(PROFILE)]
+        options = {
+            "cwd": cwd or self.home, "env": {**self.environment, "TERM": term},
+            "stderr": subprocess.PIPE, "text": True, "timeout": 10,
+        }
+        if terminal:
+            master, slave = os.openpty()
+            try:
+                result = subprocess.run(command, stdin=slave, stdout=slave, **options)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                # The marker is short enough to fit in the PTY buffer before reading.
+                self.assertIn(b"command-reached", os.read(master, 4096))
+            finally:
+                os.close(slave)
+                os.close(master)
+        else:
+            result = subprocess.run(command, stdin=subprocess.DEVNULL,
+                                    stdout=subprocess.PIPE, **options)
+            self.assertEqual(result.stdout, "command-reached", result.stderr)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout, "command-reached")
+        return result
+
+    def test_profile_without_terminal_does_not_interrupt_commands(self):
+        result = self.run_profile()
         self.assertEqual(result.stderr, "")
+        self.assertFalse(self.log.exists())
+
+    def test_noninteractive_alias_expansion_does_not_start_screen(self):
+        self.run_profile(arguments=("-O", "expand_aliases"))
+        self.assertFalse(self.log.exists())
+
+    def test_noninteractive_shell_with_terminal_does_not_start_screen(self):
+        self.run_profile(terminal=True)
+        self.assertFalse(self.log.exists())
+
+    def test_interactive_shell_without_terminal_does_not_start_screen(self):
+        self.run_profile(arguments=("-i",))
+        self.assertFalse(self.log.exists())
+
+    def test_interactive_terminal_at_home_still_starts_screen(self):
+        self.run_profile(arguments=("-i",), terminal=True)
+        self.assertEqual(self.log.read_text(), "-U -D -R\n")
+
+    def test_interactive_terminal_inside_screen_does_not_start_another_screen(self):
+        self.run_profile(arguments=("-i",), terminal=True, term="screen-256color")
+        self.assertFalse(self.log.exists())
+
+    def test_interactive_terminal_outside_home_does_not_start_screen(self):
+        self.run_profile(arguments=("-i",), terminal=True, cwd=self.home.parent)
+        self.assertFalse(self.log.exists())
 
 
 class HistoryPromptTests(unittest.TestCase):

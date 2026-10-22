@@ -11,6 +11,12 @@ SOURCE = (ROOT / "bin/install-windows.ps1").read_text()
 BOOTSTRAP = re.search(
     r"function Get-LinuxBootstrapScript \{\n    @'\n(.*?)\n'@\n\}", SOURCE, re.S
 ).group(1)
+INSTALLER = '''function main() { echo installer >> "$TEST_LOG"; }
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  echo unexpected-bootstrap >> "$TEST_LOG"
+  exit 99
+fi
+'''
 
 
 class WindowsLinuxBootstrapTests(unittest.TestCase):
@@ -33,16 +39,24 @@ class WindowsLinuxBootstrapTests(unittest.TestCase):
         self.command("git", '''printf '%s\\n' "git $*" >> "$TEST_LOG"
 if [[ "$1" == clone ]]; then
   mkdir -p "$3/.git" "$3/bin"
-  printf '%s\\n' 'echo installer >> "$TEST_LOG"' > "$3/bin/install.sh"
+  cat > "$3/bin/install.sh" <<'INSTALLER'
+@@INSTALLER@@
+INSTALLER
 elif [[ "$*" == *'status --porcelain' ]]; then
   if [[ "${TEST_STATUS_FAIL:-0}" == 1 ]]; then exit 3; fi
   printf '%s' "${TEST_DIRTY:-}"
 elif [[ "$*" == *'branch --show-current' ]]; then
   echo "${TEST_BRANCH:-main}"
 elif [[ "$*" == *'config --get remote.origin.url' ]]; then
-  echo "${TEST_ORIGIN:-https://github.com/hidebiyori/dotfiles.git}"
+  echo "${TEST_ORIGIN-https://github.com/hidebiyori/dotfiles.git}"
+elif [[ "$*" == *'config --get branch.main.remote' ]]; then
+  echo "${TEST_UPSTREAM_REMOTE-origin}"
+elif [[ "$*" == *'config --get-all branch.main.merge' ]]; then
+  printf '%s\\n' "${TEST_UPSTREAM_REF-refs/heads/main}"
+elif [[ "$*" == *'pull --ff-only'* ]]; then
+  exit "${TEST_PULL_EXIT:-0}"
 fi
-''')
+'''.replace('@@INSTALLER@@', INSTALLER))
 
     def command(self, name, body):
         destination = self.bin / name
@@ -60,7 +74,7 @@ fi
         repository = self.home / "git/dotfiles"
         (repository / ".git").mkdir(parents=True)
         (repository / "bin").mkdir()
-        (repository / "bin/install.sh").write_text('echo installer >> "$TEST_LOG"\n')
+        (repository / "bin/install.sh").write_text(INSTALLER)
         return repository
 
     def test_first_clone_is_in_linux_home_and_hands_off_to_installer(self):
@@ -114,6 +128,55 @@ fi
         result = self.run_bootstrap(TEST_ORIGIN="https://example.invalid/unrelated.git")
         self.assertNotEqual(result.returncode, 0)
         self.assertNotIn("pull ", self.log.read_text())
+        self.assertNotIn("installer", self.log.read_text())
+
+    def test_origin_cases_match_the_shared_identity_check(self):
+        self.existing_checkout()
+        cases = [
+            ("https", "https://github.com/hidebiyori/dotfiles.git", True),
+            ("https without suffix", "https://github.com/hidebiyori/dotfiles", True),
+            ("scp ssh", "git@github.com:hidebiyori/dotfiles.git", True),
+            ("scp without suffix", "git@github.com:hidebiyori/dotfiles", True),
+            ("ssh url", "ssh://git@github.com/hidebiyori/dotfiles.git", True),
+            ("ssh without suffix", "ssh://git@github.com/hidebiyori/dotfiles", True),
+            ("at in foreign path", "https://example.invalid/a@github.com/hidebiyori/dotfiles.git", False),
+            ("github as username", "https://github.com@example.invalid/hidebiyori/dotfiles.git", False),
+            ("other repository", "https://github.com/another/dotfiles.git", False),
+            ("other host", "https://example.invalid/hidebiyori/dotfiles.git", False),
+            ("empty origin", "", False),
+        ]
+        for label, origin, expected in cases:
+            with self.subTest(kind=label):
+                self.log.unlink(missing_ok=True)
+                shared = subprocess.run(
+                    ["bash", "--noprofile", "--norc", "-c",
+                     'source "$1"; [[ "$(gitRepositoryIdentity "${2:-missing}")" == https://github.com/hidebiyori/dotfiles ]]',
+                     "bash", str(ROOT / "lib/install/common.sh"), origin],
+                    env=self.environment, text=True, capture_output=True,
+                )
+                bootstrap = self.run_bootstrap(TEST_ORIGIN=origin)
+                self.assertEqual((shared.returncode == 0, bootstrap.returncode == 0), (expected, expected))
+                calls = self.log.read_text()
+                if not expected:
+                    for forbidden in ("remote set-url", "pull ", "installer"):
+                        self.assertNotIn(forbidden, calls)
+
+    def test_other_missing_or_multiple_upstreams_stop_before_changes(self):
+        self.existing_checkout()
+        for overrides in ({"TEST_UPSTREAM_REMOTE": "foreign"}, {"TEST_UPSTREAM_REMOTE": ""},
+                          {"TEST_UPSTREAM_REF": ""}, {"TEST_UPSTREAM_REF": "refs/heads/other"},
+                          {"TEST_UPSTREAM_REF": "refs/heads/main\nrefs/heads/other"}):
+            with self.subTest(settings=overrides):
+                self.log.unlink(missing_ok=True)
+                result = self.run_bootstrap(**overrides)
+                self.assertNotEqual(result.returncode, 0)
+                for forbidden in ("remote set-url", "pull ", "installer"):
+                    self.assertNotIn(forbidden, self.log.read_text())
+
+    def test_failed_pull_stops_before_installer(self):
+        self.existing_checkout()
+        result = self.run_bootstrap(TEST_PULL_EXIT="17")
+        self.assertEqual(result.returncode, 17)
         self.assertNotIn("installer", self.log.read_text())
 
     def test_failed_checkout_status_stops_before_pull_or_install(self):

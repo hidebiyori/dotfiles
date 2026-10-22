@@ -68,7 +68,13 @@ if [[ "$*" == *"rev-parse --show-toplevel" ]]; then
   if [[ -n "${TEST_GIT_ROOT:-}" ]]; then printf '%s\\n' "$TEST_GIT_ROOT"; else (cd -- "$2" && pwd -P); fi
 elif [[ "$*" == *"config --get remote.origin.url" ]]; then
   printf '%s\\n' "${TEST_ORIGIN_URL-@@PUBLIC_URL@@}"
-elif [[ "$*" == *"pull --ff-only" ]]; then
+elif [[ "$*" == *"symbolic-ref --quiet HEAD" ]]; then
+  printf '%s\\n' refs/heads/main
+elif [[ "$*" == *"config --get branch."*".remote" ]]; then
+  printf '%s\\n' origin
+elif [[ "$*" == *"config --get-all branch."*".merge" ]]; then
+  printf '%s\\n' refs/heads/main
+elif [[ "$*" == *"pull --ff-only"* ]]; then
   exit "${TEST_PULL_EXIT:-0}"
 fi
 '''.replace('@@PUBLIC_URL@@', PUBLIC_URL))
