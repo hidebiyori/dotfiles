@@ -285,6 +285,20 @@ esac
         for destination, inode in destinations:
             self.assertEqual(destination.lstat().st_ino, inode)
 
+    def test_file_destination_directory_is_preserved_without_nested_link(self):
+        source = self.home / "source"
+        source.mkdir()
+        (source / ".vimrc").write_text("set number\n")
+        destination = self.home / ".vimrc"
+        destination.mkdir()
+        marker = destination / "keep.txt"
+        marker.write_text("keep")
+        with self.assertRaises(subprocess.CalledProcessError) as failed:
+            self.run_bash('setOptions; setSymbolicLink "$HOME/source" "$HOME"')
+        self.assertIn("配置先にディレクトリ", failed.exception.stderr)
+        self.assertEqual(list(destination.iterdir()), [marker])
+        self.assertEqual(marker.read_text(), "keep")
+
     def test_wsl_main_repeatedly_preserves_identical_links_and_copies(self):
         repository = self.prepare_install("Linux example microsoft-standard-WSL2")
         appdata, _ = self.prepare_windows()

@@ -77,6 +77,10 @@ function setSymbolicLink()
       mkdir -p "${dstPath}"
       setSymbolicLink "${srcPath}" "${dstPath}"
     else
+      if [[ -d "${dstPath}" && ! -L "${dstPath}" ]]; then
+        echo "${dstPath}: 設定ファイルの配置先にディレクトリがあるため停止します。" >&2
+        return 1
+      fi
       ln -sfnv "${srcPath}" "${dstPath}"
     fi
   done
