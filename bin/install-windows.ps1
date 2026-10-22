@@ -206,20 +206,27 @@ if [ -e "${repository}" ]; then
     echo 'Switch ~/git/dotfiles to main after preserving your work, then retry.' >&2
     exit 1
   fi
+  upstream_remote="$(git -C "${repository}" config --get branch.main.remote || true)"
+  upstream_ref="$(git -C "${repository}" config --get-all branch.main.merge || true)"
+  if [[ "${upstream_remote}" != origin || "${upstream_ref}" != refs/heads/main ]]; then
+    echo '~/git/dotfiles main must track origin/main; keeping it unchanged.' >&2
+    exit 1
+  fi
   origin="$(git -C "${repository}" config --get remote.origin.url || true)"
   if [[ "${origin}" == https://* ]]; then
     public_origin="${origin%%[?#]*}"
     public_origin="${public_origin#https://}"
-    public_origin="https://${public_origin##*@}"
-    if [ "${public_origin}" != https://github.com/hidebiyori/dotfiles.git ]; then
+    origin_authority="${public_origin%%/*}"
+    public_origin="https://${origin_authority##*@}${public_origin#"${origin_authority}"}"
+    if [ "${public_origin%.git}" != https://github.com/hidebiyori/dotfiles ]; then
       echo '~/git/dotfiles has a different origin; keeping it unchanged.' >&2
       exit 1
     fi
     if [ "${origin}" != "${public_origin}" ]; then
       git -C "${repository}" remote set-url origin "${public_origin}"
     fi
-  elif [[ "${origin}" != git@github.com:hidebiyori/dotfiles.git &&
-          "${origin}" != ssh://git@github.com/hidebiyori/dotfiles.git ]]; then
+  elif [[ "${origin%.git}" != git@github.com:hidebiyori/dotfiles &&
+          "${origin%.git}" != ssh://git@github.com/hidebiyori/dotfiles ]]; then
     echo '~/git/dotfiles has an unsupported origin; check it before retrying.' >&2
     exit 1
   fi
@@ -228,7 +235,8 @@ else
   git clone https://github.com/hidebiyori/dotfiles.git "${repository}"
 fi
 cd "${repository}"
-bash bin/install.sh
+# Git has already fetched the entry point; run it without another bootstrap pull.
+bash -c 'source "$1" || exit; main' bash "${repository}/bin/install.sh"
 '@
 }
 

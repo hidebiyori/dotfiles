@@ -6,6 +6,8 @@ import subprocess
 import tempfile
 import unittest
 
+from test_windows_bootstrap import BOOTSTRAP
+
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_URL = "https://github.com/hidebiyori/dotfiles.git"
@@ -162,7 +164,7 @@ class RepositoryUpdateTests(unittest.TestCase):
         self.assertEqual((self.checkout / "marker").read_text(), "stable update")
         self.assertEqual(self.git("-C", self.checkout, "branch", "--show-current"), "local-stable")
 
-    def assert_fetched_code_is_used(self, entrypoint):
+    def assert_fetched_code_is_used(self, entrypoint, windows_bootstrap=False):
         shutil.copytree(ROOT / "lib", self.author / "lib")
         (self.author / "bin").mkdir()
         shutil.copy2(ROOT / "bin" / entrypoint, self.author / "bin" / entrypoint)
@@ -197,6 +199,7 @@ for argument in "$@"; do
   if [[ "$argument" == pull ]]; then printf '%s\\n' pull >> "$TEST_PULL_LOG"; break; fi
 done
 exec ''' + git_executable + ' "$@"\n')
+        (commands / "id").write_text("#!/bin/bash\necho 1000\n")
         # A regression must never start a real package manager or download.
         for name in ("sudo", "brew", "mise", "curl", "fcitx-autostart", "fcitx-configtool"):
             (commands / name).write_text('#!/bin/bash\necho "Unexpected installer" >&2\nexit 99\n')
@@ -204,7 +207,7 @@ exec ''' + git_executable + ' "$@"\n')
             command.chmod(0o755)
         pull_log = self.scratch / "pull.log"
         result = subprocess.run(
-            ["bash", str(self.checkout / "bin" / entrypoint)],
+            ["bash", "-c", BOOTSTRAP] if windows_bootstrap else ["bash", str(self.checkout / "bin" / entrypoint)],
             env={**self.environment, "PATH": str(commands) + os.pathsep + os.environ["PATH"],
                  "TEST_PULL_LOG": str(pull_log)},
             capture_output=True, text=True,
@@ -224,6 +227,9 @@ exec ''' + git_executable + ' "$@"\n')
 
     def test_setup_uses_fetched_entrypoint_and_helpers_immediately(self):
         self.assert_fetched_code_is_used("install.sh")
+
+    def test_windows_bootstrap_uses_fetched_code_without_a_second_pull(self):
+        self.assert_fetched_code_is_used("install.sh", windows_bootstrap=True)
 
 
 if __name__ == "__main__":

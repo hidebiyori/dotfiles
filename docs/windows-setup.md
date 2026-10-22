@@ -59,8 +59,9 @@ Steam だけの導入・確認方法は [Steam（任意）](desktop-apps.md#stea
 
 ## 既存データと Windows 連携
 
-- `~/git/dotfiles` が既にある場合は、変更のない `main` かつ origin がこのリポジトリであることを確認して fast-forward 更新する。
+- `~/git/dotfiles` が既にある場合は、変更のない `main` が `origin/main` を追跡し、origin がこのリポジトリであることを確認して fast-forward 更新する。
   別の接続先・作業ブランチ・未コミットの変更があれば停止する。
+  HTTPS / SSH と `.git` 接尾辞の有無に対応し、取得後のコードでセットアップを実行する。セットアップ内での Git 再取得は行わない。
 - 指定名の WSL2 を再利用する。WSL1 は作り直さず、バックアップ後の明示的な変換を案内する。
 - Windows の実際の Downloads をリンクし、通常版 VS Code の既定プロファイルへ設定をコピーする。
   Downloads の実ディレクトリは維持し、同一内容のコピーは省く。Windows 連携を使えなければ省略を表示する。
