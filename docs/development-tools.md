@@ -10,6 +10,11 @@
 `r` で設定を再読み込みしても履歴の同期処理は重複登録しない。
 既存の `PROMPT_COMMAND` が文字列または配列の場合も、登録済みの処理を保つ。
 
+`git p` は作業を一時退避し、`master` または `main` を fast-forward 更新して、
+マージ済みの作業ブランチを削除する。`master` と `main` は削除しない。
+今回退避した作業だけをステージ状態も含めて復元し、以前の stash は維持する。
+更新や復元に失敗した場合は退避データを残すため、表示された stash を確認してから復元する。
+
 ## mise / Python / Node / npm / Firebase CLI
 
 グローバル設定は [`src/.config/mise/config.toml`](../src/.config/mise/config.toml) で管理し、

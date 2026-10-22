@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+git rev-parse --show-toplevel >/dev/null
+savedStash=''
+
+function reportFailure()
+{
+  local status=$?
+  if (( status != 0 )) && [[ -n "${savedStash}" ]]; then
+    printf 'Git: 退避した作業は stash %s に残しています。内容を確認してから復元してください。\n' "${savedStash}" >&2
+  fi
+  return "${status}"
+}
+trap reportFailure EXIT
+
+# A unique message distinguishes a new stash even when its contents match an old one.
+stashBefore="$(git rev-parse --verify -q refs/stash || true)"
+git stash push -m "dotfiles git p ($$-${RANDOM}-${RANDOM})"
+stashAfter="$(git rev-parse --verify -q refs/stash || true)"
+if [[ "${stashAfter}" != "${stashBefore}" ]]; then
+  savedStash="${stashAfter}"
+fi
+
+git checkout master 2>/dev/null || git checkout main
+git pull --ff-only
+
+# An empty deletion list succeeds, and both primary branch names are preserved.
+mergedBranches="$(git for-each-ref --merged=HEAD --format='%(refname:strip=2)' refs/heads/)"
+while IFS= read -r branch; do
+  case "${branch}" in
+    ''|main|master) continue ;;
+  esac
+  git branch -d -- "${branch}"
+done <<< "${mergedBranches}"
+
+if [[ -n "${savedStash}" ]]; then
+  git stash apply --index "${savedStash}"
+  # Do not drop a newer stash created by a hook or another Git command.
+  if [[ "$(git rev-parse --verify -q refs/stash || true)" == "${savedStash}" ]]; then
+    git stash drop 'stash@{0}'
+  else
+    echo 'Git: stash の順序が変わったため、復元した退避データも保持しています。' >&2
+  fi
+  savedStash=''
+fi

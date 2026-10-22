@@ -51,7 +51,7 @@
   co = checkout
   ci = commit -v
 
-  p = !git stash && (git co master 2> /dev/null || git co main) && git pull && git branch --merged | grep -v -e '*' -e master | xargs git branch -d && git stash pop
+  p = "!bash \"$HOME/bin/git-p\""
 
 
   ps = push origin HEAD
