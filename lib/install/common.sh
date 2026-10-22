@@ -113,6 +113,24 @@ function setGitRepository()
       echo 'Git: origin が想定したリポジトリと異なるため、変更せず停止します。' >&2
       return 1
     fi
+    local currentRef branch upstreamRemote upstreamRef
+    if ! currentRef="$(git -C "${targetPath}" symbolic-ref --quiet HEAD 2>/dev/null)" ||
+       [[ "${currentRef}" != refs/heads/?* ]]; then
+      echo 'Git: 現在のブランチを確認できないため更新を停止します。' >&2
+      return 1
+    fi
+    branch="${currentRef#refs/heads/}"
+    if ! upstreamRemote="$(git -C "${targetPath}" config --get "branch.${branch}.remote" 2>/dev/null)" ||
+       [[ "${upstreamRemote}" != origin ]]; then
+      echo 'Git: 現在のブランチが origin を追跡していないため、変更せず停止します。' >&2
+      return 1
+    fi
+    if ! upstreamRef="$(git -C "${targetPath}" config --get-all "branch.${branch}.merge" 2>/dev/null)" ||
+       [[ "${upstreamRef}" != refs/heads/?* || "${upstreamRef}" == *$'\n'* ]] ||
+       ! git check-ref-format "${upstreamRef}" >/dev/null 2>&1; then
+      echo 'Git: origin の追跡ブランチを一つに特定できないため更新を停止します。' >&2
+      return 1
+    fi
     if [[ "${repositoryUrl}" == https://* && "${originUrl}" == https://* ]]; then
       local originRepository="${originUrl%%[?#]*}"
       originRepository="${originRepository#https://}"
@@ -122,7 +140,7 @@ function setGitRepository()
         git -C "${targetPath}" remote set-url origin "${originRepository}"
       fi
     fi
-    git -C "${targetPath}" pull --ff-only
+    git -C "${targetPath}" pull --ff-only origin "${upstreamRef}"
   else
     git clone "${repositoryUrl}" "${targetPath}"
   fi

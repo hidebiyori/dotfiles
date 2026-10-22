@@ -92,6 +92,76 @@ class RepositoryUpdateTests(unittest.TestCase):
         self.assertEqual((linked / "marker").read_text(), "second")
         self.assertEqual(linked.lstat().st_ino, inode)
 
+    def test_a_foreign_upstream_is_rejected_even_when_origin_is_expected(self):
+        self.create_checkout()
+        initial = self.git("-C", self.checkout, "rev-parse", "HEAD")
+        foreign = self.scratch / "foreign.git"
+        self.git("clone", "--bare", self.origin, foreign)
+        self.git("-C", self.author, "remote", "add", "foreign", foreign)
+        (self.author / "marker").write_text("foreign-only update")
+        self.git("-C", self.author, "add", "marker")
+        self.git("-C", self.author, "commit", "-m", "Foreign fixture update")
+        self.git("-C", self.author, "push", "foreign", "main")
+        self.git("-C", self.checkout, "remote", "add", "foreign", foreign)
+        self.git("-C", self.checkout, "fetch", "foreign")
+        self.git("-C", self.checkout, "branch", "--set-upstream-to=foreign/main", "main")
+        result = self.update_repository(self.checkout)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("origin を追跡していない", result.stderr)
+        self.assertEqual(self.git("-C", self.checkout, "rev-parse", "HEAD"), initial)
+        self.assertEqual((self.checkout / "marker").read_text(), "first")
+        self.assertEqual(self.git("-C", self.checkout, "config", "--get", "remote.origin.url"), PUBLIC_URL)
+
+    def test_missing_or_local_upstream_does_not_update(self):
+        self.create_checkout()
+        (self.author / "marker").write_text("second")
+        self.publish()
+        for remote in (None, "."):
+            with self.subTest(remote=remote):
+                if remote is None:
+                    self.git("-C", self.checkout, "config", "--unset", "branch.main.remote")
+                else:
+                    self.git("-C", self.checkout, "config", "branch.main.remote", remote)
+                result = self.update_repository(self.checkout)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual((self.checkout / "marker").read_text(), "first")
+
+    def test_detached_head_does_not_update(self):
+        self.create_checkout()
+        self.git("-C", self.checkout, "checkout", "--detach")
+        result = self.update_repository(self.checkout)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("現在のブランチを確認できない", result.stderr)
+
+    def test_missing_or_multiple_merge_refs_do_not_update(self):
+        self.create_checkout()
+        (self.author / "marker").write_text("second")
+        self.publish()
+        for refs in ([], ["refs/heads/main", "refs/heads/other"], ["refs/tags/release"]):
+            with self.subTest(refs=refs):
+                self.git("-C", self.checkout, "config", "--replace-all", "branch.main.merge", "refs/heads/main")
+                self.git("-C", self.checkout, "config", "--unset-all", "branch.main.merge")
+                for ref in refs:
+                    self.git("-C", self.checkout, "config", "--add", "branch.main.merge", ref)
+                result = self.update_repository(self.checkout)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual((self.checkout / "marker").read_text(), "first")
+
+    def test_an_origin_branch_other_than_main_can_be_updated(self):
+        self.create_checkout()
+        self.git("-C", self.author, "checkout", "-b", "stable")
+        self.git("-C", self.author, "push", "origin", "stable")
+        self.git("-C", self.checkout, "fetch", "origin")
+        self.git("-C", self.checkout, "checkout", "-b", "local-stable", "--track", "origin/stable")
+        (self.author / "marker").write_text("stable update")
+        self.git("-C", self.author, "add", "marker")
+        self.git("-C", self.author, "commit", "-m", "Stable fixture update")
+        self.git("-C", self.author, "push", "origin", "stable")
+        result = self.update_repository(self.checkout)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.checkout / "marker").read_text(), "stable update")
+        self.assertEqual(self.git("-C", self.checkout, "branch", "--show-current"), "local-stable")
+
     def assert_fetched_code_is_used(self, entrypoint):
         shutil.copytree(ROOT / "lib", self.author / "lib")
         (self.author / "bin").mkdir()
