@@ -78,7 +78,7 @@ Linux のパッケージ管理は apt を使い、WSL では Windows 側の GUI 
 | [開発ツール](docs/development-tools.md) | 手動リンクを使う設定、mise / CLI、FFmpeg、unzip、GitHub 初回認証、Flutter、スキル用 Python |
 | [リポジトリ共通の保守](docs/repository-maintenance.md) | 新規リポジトリの確認項目、Dependabot の設定、CI の雛形、プリセット・文書リンク検証 |
 | [Next.js の共通設定](docs/project-presets.md) | Biome / TypeScript の原本・同期、初期テンプレート、プロジェクト固有設定との分担 |
-| [デスクトップアプリ](docs/desktop-apps.md) | OS 別の導入・更新、Chromebook の最大化起動 |
+| [デスクトップアプリ](docs/desktop-apps.md) | OS 別の導入・更新、手動の表示・入力設定、Chromebook の最大化起動 |
 | [Codex の共通指示とスキル](docs/codex.md) | AGENTS.md の管理場所・同期、共通とプロジェクト固有の分担 |
 | [Firebase 公開認証](docs/firebase-deploy-auth.md) | 既存認証の確認、ADC、GitHub OIDC / WIF |
 | [Chrome / Playwright](docs/playwright-extension.md) | Chromebook で必要時だけ接続する手順 |
