@@ -212,7 +212,16 @@ if [ -e "${repository}" ]; then
     echo '~/git/dotfiles main must track origin/main; keeping it unchanged.' >&2
     exit 1
   fi
-  origin="$(git -C "${repository}" config --get remote.origin.url || true)"
+  if ! origin="$(git -C "${repository}" config --get-all remote.origin.url 2>/dev/null && printf '.')"; then
+    echo '~/git/dotfiles origin could not be read; keeping it unchanged.' >&2
+    exit 1
+  fi
+  # Preserve trailing empty values until the single-URL check has completed.
+  origin="${origin%$'\n.'}"
+  if [[ -z "${origin}" || "${origin}" == *$'\n'* ]]; then
+    echo '~/git/dotfiles origin must have exactly one non-empty URL; keeping it unchanged.' >&2
+    exit 1
+  fi
   if [[ "${origin}" == https://* ]]; then
     public_origin="${origin%%[?#]*}"
     public_origin="${public_origin#https://}"

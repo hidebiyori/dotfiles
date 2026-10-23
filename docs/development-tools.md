@@ -98,7 +98,7 @@ mise 本体の更新は導入元の apt / Homebrew / winget で行う。
 `u` は `bin/update.sh`、`up` は `bin/upgrade.sh` を呼ぶ。
 前者は設定の同期・反映だけ、後者は設定の同期後に導入済みの共通環境を更新する。
 Git の更新前に、指定先がチェックアウトのルートで、origin が想定するリポジトリであることを確認する。
-origin が不一致・未登録の場合や、親ディレクトリの Git 管理が見つかった場合は変更せず停止する。
+origin の URL が想定外・未登録・複数登録の場合や、親ディレクトリの Git 管理が見つかった場合は変更せず停止する。
 同じ GitHub リポジトリの HTTPS / SSH 接続と、チェックアウトへの手動リンクは利用できる。
 現在のブランチが origin の単一ブランチを追跡することも確認し、その取得先を明示して更新する。
 追跡先が未設定・別 remote の場合や detached HEAD では停止し、ブランチや追跡先を自動変更しない。
@@ -236,6 +236,8 @@ run = "flutter pub upgrade"
 スキル付属の Python スクリプトには `~/.local/share/codex-skill-python/bin/python` を使う。
 セットアップは独立した仮想環境に `bin/requirements-skill-python.txt` の PyYAML を導入する。
 通常の `python3` と各プロジェクトの依存関係は変更しない。導入済みなら再利用する。
+セットアップ中の Python は隔離モードで呼び出し、作業フォルダーや `PYTHONPATH` のモジュールと、
+`PYTHONOPTIMIZE` による最適化の影響を受けずに依存関係を確認する。
 
 個別に準備する場合は、Linux では `python3-venv`、Mac では Homebrew の `python` を用意して次を実行する。
 
