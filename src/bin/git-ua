@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Installed helpers keep the caller's directory, unlike Git shell aliases.
+repositoryRoot="$(git rev-parse --show-cdup)"
+cd -- "${repositoryRoot:-.}"
+
 # File names are literal pathspecs, never shell words, Git options, or patterns.
 git ls-files --others --exclude-standard -z |
   git --literal-pathspecs add --pathspec-from-file=- --pathspec-file-nul

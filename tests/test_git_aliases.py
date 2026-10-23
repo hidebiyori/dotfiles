@@ -1,3 +1,4 @@
+import os
 import subprocess
 import unittest
 
@@ -15,6 +16,9 @@ class GitUntrackedAliasTests(unittest.TestCase):
         self.checkout = self.fixture.checkout
         self.environment = self.fixture.environment
         (self.fixture.home / "bin/git-ua").symlink_to(ROOT / "src/bin/git-ua")
+        self.environment["PATH"] = os.pathsep.join(
+            (str(self.fixture.home / "bin"), self.environment.get("PATH", os.defpath))
+        )
         alias = self.fixture.git("config", "--file", ROOT / "src/.config/git/config", "--get", "alias.ua")
         self.git("config", "alias.ua", alias)
 
@@ -92,6 +96,19 @@ class GitUntrackedAliasTests(unittest.TestCase):
         (self.checkout / "root file").write_text("new file\n")
         (nested / "nested file").write_text("new file\n")
         result = self.run_alias(cwd=nested)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.staged_names(), ["nested/nested file", "root file"])
+
+    def test_shell_alias_from_a_subdirectory_still_adds_repository_untracked_files(self):
+        nested = self.checkout / "nested"
+        nested.mkdir()
+        (self.checkout / "root file").write_text("new file\n")
+        (nested / "nested file").write_text("new file\n")
+        alias = self.git("config", "--get", "alias.ua")
+        result = subprocess.run(
+            ["git", "-c", f"alias.ua-alias-fixture={alias}", "ua-alias-fixture"],
+            cwd=nested, env=self.environment, text=True, capture_output=True,
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.staged_names(), ["nested/nested file", "root file"])
 
