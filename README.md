@@ -80,6 +80,7 @@ Linux のパッケージ管理は apt を使い、WSL では Windows 側の GUI 
 | [Next.js の共通設定](docs/project-presets.md) | Biome / TypeScript の原本・同期、初期テンプレート、プロジェクト固有設定との分担 |
 | [デスクトップアプリ](docs/desktop-apps.md) | OS 別の導入・更新、手動の表示・入力設定、Chromebook の最大化起動 |
 | [Codex の共通指示とスキル](docs/codex.md) | AGENTS.md の管理場所・同期、共通とプロジェクト固有の分担 |
+| [会話から得た共通知見](docs/learnings.md) | 知見の採用・公開前確認、再利用する判断基準と手順へのリンク |
 | [Firebase 公開認証](docs/firebase-deploy-auth.md) | 既存認証の確認、ADC、GitHub OIDC / WIF |
 | [Chrome / Playwright](docs/playwright-extension.md) | Chromebook で必要時だけ接続する手順 |
 
