@@ -236,6 +236,8 @@ run = "flutter pub upgrade"
 スキル付属の Python スクリプトには `~/.local/share/codex-skill-python/bin/python` を使う。
 セットアップは独立した仮想環境に `bin/requirements-skill-python.txt` の PyYAML を導入する。
 通常の `python3` と各プロジェクトの依存関係は変更しない。導入済みなら再利用する。
+セットアップ中の Python は隔離モードで呼び出し、作業フォルダーや `PYTHONPATH` のモジュールと、
+`PYTHONOPTIMIZE` による最適化の影響を受けずに依存関係を確認する。
 
 個別に準備する場合は、Linux では `python3-venv`、Mac では Homebrew の `python` を用意して次を実行する。
 

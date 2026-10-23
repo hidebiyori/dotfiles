@@ -15,14 +15,14 @@ if [ ! -x "${skill_env}/bin/python" ]; then
     echo "Python 3 を先に導入してください（macOS: brew install python）。" >&2
     exit 1
   fi
-  if ! python3 -c 'import venv, ensurepip' >/dev/null 2>&1; then
+  if ! python3 -I -c 'import venv, ensurepip' >/dev/null 2>&1; then
     echo "venv / ensurepip が必要です（Debian・Ubuntu: sudo apt install python3-venv）。" >&2
     exit 1
   fi
-  python3 -m venv "${skill_env}"
+  python3 -I -m venv "${skill_env}"
 fi
 
-if ! "${skill_env}/bin/python" -c 'import yaml; assert yaml.__version__ == "6.0.3"' >/dev/null 2>&1; then
-  "${skill_env}/bin/python" -m pip install --disable-pip-version-check -r "${requirements}"
+if ! "${skill_env}/bin/python" -I -c 'import yaml; assert yaml.__version__ == "6.0.3"' >/dev/null 2>&1; then
+  "${skill_env}/bin/python" -I -m pip install --disable-pip-version-check -r "${requirements}"
 fi
-"${skill_env}/bin/python" -c 'import sys, yaml; print(f"Skill Python: {sys.executable} (PyYAML {yaml.__version__})")'
+"${skill_env}/bin/python" -I -c 'import sys, yaml; print(f"Skill Python: {sys.executable} (PyYAML {yaml.__version__})")'
