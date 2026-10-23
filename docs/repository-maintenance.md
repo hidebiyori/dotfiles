@@ -5,6 +5,100 @@
 各リポジトリへコピーして Git 管理し、CI と別の端末でも clone だけで使える状態にする。
 セットアップや dotfiles の更新から、各プロジェクトへ自動反映しない。
 
+## 実行ファイルの配置
+
+ディレクトリ名は実装言語ではなく、コマンドの使い方で決める。
+`bin/` にシェルや Python のスクリプトを置いてよく、コンパイル済みである必要はない。
+
+| 場所 | 用途 |
+| --- | --- |
+| `bin/` | 利用者が直接呼ぶ CLI、セットアップ・更新・共通保守の入口 |
+| `scripts/` | アプリ内のビルド・検証・公開など、そのプロジェクトの開発作業 |
+| `lib/` | 入口から読み込む共有処理 |
+
+両方の用途がある場合に分ける。既存の構成を名前の統一だけのために移動しない。
+dotfiles は `bin/` を入口、`lib/install/` を共有処理とし、
+`src/bin/` はホームへ配置するコマンドの原本として使う。
+アプリでは [共通プリセットの規約](project-presets.md#ディレクトリとコマンドの規約)に従い `scripts/` を基本にする。
+
+## mise.lock の採用
+
+`mise.toml` はツールの要求バージョンを指定し、`mise.lock` は解決した正確なバージョンと、
+対応する backend が提供する取得 URL・チェックサムを記録する。
+たとえば `node = "24"` だけでは、導入時期によってパッチバージョンが変わり得る。
+
+| 対象 | 方針 |
+| --- | --- |
+| mise でビルド・テスト・公開用のツールを管理するプロジェクト | `mise.toml` と `mise.lock` を Git 管理することを基本にする |
+| プロジェクト固有の mise ツールがない文書・ノート集 | `mise.toml` や `mise.lock` を形式だけのために追加しない |
+| dotfiles のユーザー共通ツール | グローバル設定の指定範囲で更新する。プロジェクト用のルート `mise.lock` は不要 |
+| `mise.local.toml` 等の端末固有設定 | 対応する local lockfile も含めて Git 管理しない |
+
+完全なバージョンを `mise.toml` に書けばバージョン自体は固定できるが、
+取得情報も記録する lockfile は再現性の確認に役立つ。
+`mise.lock` は npm 等の依存関係を固定しないため、`package-lock.json` や `uv.lock` も維持する。
+
+プロジェクトへ導入する場合は、次の順で差分を確認する。
+
+```bash
+mise lock
+mise install --locked --jobs 1
+```
+
+`mise lock` はツールをインストールせずに lockfile を生成するが、解決のための通信は発生し得る。
+lockfile をコミットし、CI も `--locked` で導入する。
+CI と利用端末の各プラットフォームに必要な取得情報が含まれることを確認する。
+`.mise/locks/` に依存グラフの付随ファイルが生成された場合は、それも対応する lockfile と管理する。
+端末固有の lockfile に対応する付随ファイルは除外する。
+URL に認証情報が含まれないことも、コミット前に確認する。
+`--locked` でも未取得のツール等には通信が必要で、オフライン導入を保証するものではない。
+
+更新時は `mise lock --bump node` のように対象を絞り、必要な導入・検証後にコミットする。
+既存プロジェクトへは、CI と対応環境を確認しながら個別に導入する。
+[mise の lockfile](https://mise.jdx.dev/dev-tools/mise-lock.html)。
+
+## 既定ブランチの保護
+
+`Your main branch isn't protected` は、既定ブランチに保護が設定されていないことを示す。
+日常の編集方法に応じて次のいずれかを選び、個別の `AGENTS.md` に用途と例外を記載する。
+
+| 項目 | アプリ・ツール・dotfiles | 手動で直接編集する文書・ノート集 |
+| --- | --- | --- |
+| 利用者の main への通常 push | PR を経由する | 許可する |
+| PR | 必須 | 利用者の手動編集には必須にしない |
+| 必須 CI | PR で実行される検証ジョブを登録する | 直接 push を許すため必須チェックは設定しない。push 後の CI は実行できる |
+| 承認レビュー | 個人運用では必須人数を 0 にする | 必須にしない |
+| force push・ブランチ削除 | 禁止 | 禁止 |
+
+文書・ノート集では、Obsidian 等で手動で読み書きし、AI で分類・整理する運用を併用できる。
+利用者の直接編集を許すことと、エージェントの通常作業を PR 経由にすることは両立する。
+エージェントの直接 push も認める場合は、個別の指示で対象と条件を明記する。
+直接 push 後の CI は事後検証なので、push 前の差分・リンク等の確認も行う。
+
+新規の保護設定は Settings → Rules → Rulesets の branch ruleset を基本にし、
+既定ブランチを対象に `Active` で適用する。
+両方の運用で `Restrict deletions` と `Block force pushes` を有効にし、
+管理者を含めて通常の bypass は設定しない。
+直接編集する対象では `Restrict updates`、PR 必須、必須ステータスチェックを設定しない。
+
+アプリ等では `Require a pull request before merging` と `Require status checks to pass before merging` を追加し、
+対象ブランチを最新にする設定も有効にする。
+必須チェックは、実際に PR で成功したジョブ名と提供元を確認して登録する。
+文書だけの変更でも必須チェックが実行されるよう、workflow のパス条件等を確認する。
+main へのマージ後にだけ実行する公開ジョブを、PR の必須チェックへ登録しない。
+個人運用で承認者を確保できない場合も、承認人数 0 の PR と CI で運用できる。
+
+ruleset と既存の branch protection は併せて適用され、厳しい方の条件が残る。
+設定前に両方を確認し、既存の保護を不用意に置き換えない。
+GitHub Free では公開リポジトリが対象で、非公開リポジトリは Pro / Team 等の対応プランが必要。
+プラン上利用できない場合は、作業ルールで補い、GitHub 上で強制できないことを記録する。
+[ruleset の概要・利用条件](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)、
+[設定できる保護ルール](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)。
+
+共通方針の文書化だけでは GitHub 側の設定は変わらない。
+適用対象、既存ルール、プラン、PR の検証ジョブを確認してからリポジトリごとに設定し、
+設定の保存後は実際に有効なルールを再確認する。
+
 ## 改行・編集設定
 
 導入済みの Python 3 で、変更予定を確認してから反映する。
@@ -91,6 +185,8 @@ PR を作る auto-triage rules も変更しないので、存在する場合は�
 ## 新規リポジトリ作成時のチェックリスト
 
 - [ ] [初期設定](#改行編集設定)を導入し、用途に応じて Node CI などを選ぶ。
+- [ ] [ツールの固定方針](#miselock-の採用)を選び、採用時は lockfile と CI の `--locked` を揃える。
+- [ ] [既定ブランチの保護](#既定ブランチの保護)を選び、直接編集の要件は個別の `AGENTS.md` に明記する。
 - [ ] 自動 PR を停止するリポジトリでは、Dependabot の全エコシステムの
   `open-pull-requests-limit` を `0` にする。既存設定は初期化コマンドで上書きされないため個別に確認する。
 - [ ] `configure-dependabot.py OWNER/REPO --write` を実行し、
@@ -132,6 +228,8 @@ CI の共通雛形は `actions/checkout@v7`、`jdx/mise-action@v5`、`actions/ca
 mise 本体は公開後24時間以上経過した安定リリースから選び、
 `minimum_release_age: 24h` でこの待機時間を明示する。Node 等のツールの更新時期は別に管理する。
 ツールの導入は1並列、npm はダウンロードキャッシュを利用する。
+初期化コマンドは `mise.lock` を生成しない。lockfile を採用するときは
+[導入手順](#miselock-の採用)に従い、mise Action の `install_args` を `--locked --jobs 1` に変更する。
 依存導入後に lockfile が変わっていないことを確認してから、
 `check` → 任意の `typecheck` → `test:ci` → `build` を順番に実行する。
 CI の権限は `contents: read`、実行時間は20分までとし、同じ ref の古い検証は取り消す。

@@ -51,11 +51,13 @@ tsconfig.json          TypeScript を使う場合の継承とパス設定
 CI、Biome の対象・例外、TypeScript の include、テストランナーの検出設定、文書の参照を更新する。
 Jest は `__tests__/` のディレクトリ名による自動検出もあるため、テスト数とスナップショットの対応を確認する。
 `scripts/` には、出力の監査など単独で実行する検証コマンドも置ける。
+利用者向け CLI の `bin/` との使い分けは、[実行ファイルの配置](repository-maintenance.md#実行ファイルの配置)を参照する。
 
 ローカルの `npm test` は用途に合わせて watch を利用できるが、CI の入口は `npm run test:ci` とし、
 watch なしで終了するコマンドを登録する。公開前の型検査・ビルド等は引き続き個別のコマンドで実行する。
 mise 設定の名前は `mise.toml` を基本にし、既存の `.mise.toml` は内容を保って移す。
 既存のバージョン指定や Java 等の追加ツールは維持する。
+ツールの固定には [mise.lock の採用方針](repository-maintenance.md#miselock-の採用)を適用する。
 
 ## 共通化するもの・各プロジェクトで決めるもの
 
