@@ -47,8 +47,12 @@ elif [[ "$*" == *'status --porcelain' ]]; then
   printf '%s' "${TEST_DIRTY:-}"
 elif [[ "$*" == *'branch --show-current' ]]; then
   echo "${TEST_BRANCH:-main}"
+elif [[ "$*" == *'config --get-all remote.origin.url' ]]; then
+  if [[ "${TEST_ORIGIN_FAIL:-0}" == 1 ]]; then exit 7; fi
+  printf '%s\\n' "${TEST_ORIGIN-https://github.com/hidebiyori/dotfiles.git}"
 elif [[ "$*" == *'config --get remote.origin.url' ]]; then
-  echo "${TEST_ORIGIN-https://github.com/hidebiyori/dotfiles.git}"
+  origins="${TEST_ORIGIN-https://github.com/hidebiyori/dotfiles.git}"
+  printf '%s\\n' "${origins##*$'\\n'}"
 elif [[ "$*" == *'config --get branch.main.remote' ]]; then
   echo "${TEST_UPSTREAM_REMOTE-origin}"
 elif [[ "$*" == *'config --get-all branch.main.merge' ]]; then
@@ -129,6 +133,31 @@ fi
         self.assertNotEqual(result.returncode, 0)
         self.assertNotIn("pull ", self.log.read_text())
         self.assertNotIn("installer", self.log.read_text())
+
+    def test_missing_or_multiple_origin_urls_stop_before_changes(self):
+        self.existing_checkout()
+        public = "https://github.com/hidebiyori/dotfiles.git"
+        foreign = "https://example.invalid/unrelated.git"
+        sentinel = "synthetic-multiple-origin-credential"
+        cases = (
+            ("read failure", {"TEST_ORIGIN_FAIL": "1"}),
+            ("empty", {"TEST_ORIGIN": ""}),
+            ("foreign first", {"TEST_ORIGIN": foreign + "\n" + public}),
+            ("foreign last", {"TEST_ORIGIN": public + "\n" + foreign}),
+            ("duplicate", {"TEST_ORIGIN": public + "\n" + public}),
+            ("trailing empty", {"TEST_ORIGIN": public + "\n"}),
+            ("leading empty", {"TEST_ORIGIN": "\n" + public}),
+            ("credentials first", {"TEST_ORIGIN": public + "?token=" + sentinel + "\n" + public}),
+        )
+        for label, overrides in cases:
+            with self.subTest(kind=label):
+                self.log.unlink(missing_ok=True)
+                result = self.run_bootstrap(**overrides)
+                self.assertNotEqual(result.returncode, 0)
+                calls = self.log.read_text()
+                for forbidden in ("remote set-url", "pull ", "installer"):
+                    self.assertNotIn(forbidden, calls)
+                self.assertNotIn(sentinel, result.stdout + result.stderr + calls)
 
     def test_origin_cases_match_the_shared_identity_check(self):
         self.existing_checkout()

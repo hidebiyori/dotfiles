@@ -66,7 +66,7 @@ class InstallerTests(unittest.TestCase):
 if [[ "$*" == *"rev-parse --show-toplevel" ]]; then
   if [[ "${TEST_ROOT_FAIL:-0}" == 1 ]]; then exit 7; fi
   if [[ -n "${TEST_GIT_ROOT:-}" ]]; then printf '%s\\n' "$TEST_GIT_ROOT"; else (cd -- "$2" && pwd -P); fi
-elif [[ "$*" == *"config --get remote.origin.url" ]]; then
+elif [[ "$*" == *"config --get-all remote.origin.url" ]]; then
   printf '%s\\n' "${TEST_ORIGIN_URL-@@PUBLIC_URL@@}"
 elif [[ "$*" == *"symbolic-ref --quiet HEAD" ]]; then
   printf '%s\\n' refs/heads/main
@@ -137,7 +137,7 @@ fi
                 self.log.unlink(missing_ok=True)
                 with self.assertRaises(subprocess.CalledProcessError):
                     self.run_bash('setOptions; setGitRepository "$PJ_URL"', extra_env=overrides)
-                self.assertNotIn("config --get remote.origin.url", self.log.read_text())
+                self.assertNotIn("config --get-all remote.origin.url", self.log.read_text())
                 self.assertNotIn(" pull", self.log.read_text())
 
     def test_repository_can_be_reapplied_and_updated_without_merging_divergence(self):

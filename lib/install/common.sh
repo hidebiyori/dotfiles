@@ -104,9 +104,14 @@ function setGitRepository()
       return 1
     fi
     local originUrl
-    if ! originUrl="$(git -C "${targetPath}" config --get remote.origin.url 2>/dev/null)" ||
-       [[ -z "${originUrl}" ]]; then
+    if ! originUrl="$(git -C "${targetPath}" config --get-all remote.origin.url 2>/dev/null && printf '.')"; then
       echo 'Git: origin を確認できないため更新を停止します。' >&2
+      return 1
+    fi
+    # Preserve trailing empty values until the single-URL check has completed.
+    originUrl="${originUrl%$'\n.'}"
+    if [[ -z "${originUrl}" || "${originUrl}" == *$'\n'* ]]; then
+      echo 'Git: origin の URL を一つに特定できないため更新を停止します。' >&2
       return 1
     fi
     if [[ "$(gitRepositoryIdentity "${originUrl}")" != "$(gitRepositoryIdentity "${repositoryUrl}")" ]]; then

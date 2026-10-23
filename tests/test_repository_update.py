@@ -74,6 +74,45 @@ class RepositoryUpdateTests(unittest.TestCase):
         self.assertIn("origin が想定したリポジトリと異なる", result.stderr)
         self.assertEqual(self.git("-C", self.checkout, "config", "--get", "remote.origin.url"), str(foreign))
 
+    def test_missing_or_multiple_origin_urls_stop_before_changes(self):
+        self.create_checkout()
+        initial = self.git("-C", self.checkout, "rev-parse", "HEAD")
+        foreign = self.scratch / "foreign.git"
+        self.git("clone", "--bare", self.origin, foreign)
+        self.git("-C", self.author, "remote", "add", "foreign", foreign)
+        (self.author / "marker").write_text("foreign-only update")
+        self.git("-C", self.author, "add", "marker")
+        self.git("-C", self.author, "commit", "-m", "Foreign fixture update")
+        self.git("-C", self.author, "push", "foreign", "main")
+        sentinel = "synthetic-multiple-origin-credential"
+        cases = (
+            ("missing", ()),
+            ("empty", ("",)),
+            ("foreign first", (str(foreign), PUBLIC_URL)),
+            ("foreign last", (PUBLIC_URL, str(foreign))),
+            ("duplicate", (PUBLIC_URL, PUBLIC_URL)),
+            ("trailing empty", (PUBLIC_URL, "")),
+            ("leading empty", ("", PUBLIC_URL)),
+            ("credentials first", (PUBLIC_URL + "?token=" + sentinel, PUBLIC_URL)),
+        )
+        for label, urls in cases:
+            with self.subTest(kind=label):
+                self.git("-C", self.checkout, "reset", "--hard", initial)
+                fetch_head = self.checkout / ".git/FETCH_HEAD"
+                fetch_head.unlink(missing_ok=True)
+                self.git("-C", self.checkout, "config", "--replace-all", "remote.origin.url", PUBLIC_URL)
+                self.git("-C", self.checkout, "config", "--unset-all", "remote.origin.url")
+                for url in urls:
+                    self.git("-C", self.checkout, "config", "--add", "remote.origin.url", url)
+                configuration = (self.checkout / ".git/config").read_bytes()
+                result = self.update_repository(self.checkout)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(self.git("-C", self.checkout, "rev-parse", "HEAD"), initial)
+                self.assertEqual((self.checkout / "marker").read_text(), "first")
+                self.assertEqual((self.checkout / ".git/config").read_bytes(), configuration)
+                self.assertFalse(fetch_head.exists())
+                self.assertNotIn(sentinel, result.stdout + result.stderr)
+
     def test_parent_repository_is_not_used_for_a_nested_directory(self):
         self.create_checkout()
         nested = self.checkout / "nested"
