@@ -60,7 +60,20 @@ URL に認証情報が含まれないことも、コミット前に確認する�
 ## 既定ブランチの保護
 
 `Your main branch isn't protected` は、既定ブランチに保護が設定されていないことを示す。
-日常の編集方法に応じて次のいずれかを選び、個別の `AGENTS.md` に用途と例外を記載する。
+この警告や設定への案内が表示されることだけで、現在のプランで保護を利用できるとは判断しない。
+先に対象の公開範囲・所有者のプランと、公式の利用条件・設定やAPIの応答を確認する。
+従来のbranch protectionとブランチのrulesetはいずれも、GitHub Freeでは公開リポジトリが対象で、
+非公開リポジトリにはPro / Team / Enterprise等の対応プランが必要。
+[branch protectionの利用条件](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)、
+[rulesetの利用条件](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)。
+HTTP 403だけでプラン制約と断定せず、プラン変更を求める応答か、権限不足など別の理由かを確認する。
+
+プラン非対応を確認した場合は保護設定を中止し、同じ設定要求を繰り返さない。
+アプリ・ツール・dotfilesは、PRと対象コミットのCI成功を作業手順で確認し、既定ブランチのforce pushと削除を行わない。
+文書・ノート集の手動編集を許す例外は維持する。個別の `AGENTS.md` に、GitHub上では強制できない制約と運用を記録し、
+プランや公開範囲が変わった場合に利用可否を再確認する。
+
+保護設定を利用できる場合は、日常の編集方法に応じて次のいずれかを選び、個別の `AGENTS.md` に用途と例外を記載する。
 
 | 項目 | アプリ・ツール・dotfiles | 手動で直接編集する文書・ノート集 |
 | --- | --- | --- |
@@ -90,9 +103,6 @@ main へのマージ後にだけ実行する公開ジョブを、PR の必須チ
 
 ruleset と既存の branch protection は併せて適用され、厳しい方の条件が残る。
 設定前に両方を確認し、既存の保護を不用意に置き換えない。
-GitHub Free では公開リポジトリが対象で、非公開リポジトリは Pro / Team 等の対応プランが必要。
-プラン上利用できない場合は、作業ルールで補い、GitHub 上で強制できないことを記録する。
-[ruleset の概要・利用条件](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)、
 [設定できる保護ルール](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)。
 
 共通方針の文書化だけでは GitHub 側の設定は変わらない。
@@ -186,7 +196,7 @@ PR を作る auto-triage rules も変更しないので、存在する場合は�
 
 - [ ] [初期設定](#改行編集設定)を導入し、用途に応じて Node CI などを選ぶ。
 - [ ] [ツールの固定方針](#miselock-の採用)を選び、採用時は lockfile と CI の `--locked` を揃える。
-- [ ] [既定ブランチの保護](#既定ブランチの保護)を選び、直接編集の要件は個別の `AGENTS.md` に明記する。
+- [ ] [既定ブランチの保護](#既定ブランチの保護)の利用可否を先に確認し、利用できる場合は保護を設定する。利用できない制約と代わりの運用、直接編集の要件は個別の `AGENTS.md` に明記する。
 - [ ] 自動 PR を停止するリポジトリでは、Dependabot の全エコシステムの
   `open-pull-requests-limit` を `0` にする。既存設定は初期化コマンドで上書きされないため個別に確認する。
 - [ ] `configure-dependabot.py OWNER/REPO --write` を実行し、
