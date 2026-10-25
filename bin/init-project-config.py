@@ -21,12 +21,18 @@ def check_parents(project, path):
             raise ConfigError(f"{parent}: 通常のディレクトリが必要です")
 
 
-def plan(project, github_actions=False, node=False):
+def plan(project, github_actions=False, node=False, python=False):
     if not project.is_dir():
         raise ConfigError("対象には既存のディレクトリを指定してください")
     templates = {name: name for name in (".editorconfig", ".gitattributes")}
     changes = []
     kept = []
+    if python:
+        # A separate uv.toml would hide an existing [tool.uv] configuration.
+        if (project / "pyproject.toml").exists() or (project / "pyproject.toml").is_symlink():
+            kept.append("pyproject.toml (tool.uv の exclude-newer を個別に確認)")
+        else:
+            templates["uv.toml"] = "uv.toml"
     if github_actions or node:
         check_parents(project, project / ".github/dependabot.yml")
         if (project / ".github/dependabot.yaml").exists() or (
@@ -36,6 +42,7 @@ def plan(project, github_actions=False, node=False):
             templates[".github/dependabot.yml"] = (
                 "dependabot-npm.yml" if node else "dependabot-actions.yml")
     if node:
+        templates[".npmrc"] = ".npmrc"
         check_parents(project, project / ".github/workflows/check.yml")
         try:
             package = json.loads((project / "package.json").read_text(encoding="utf-8"))
@@ -91,11 +98,13 @@ def main():
     profile.add_argument("--github-actions", action="store_true",
                          help="GitHub Actions 用の Dependabot 設定も追加する")
     profile.add_argument("--node", action="store_true",
-                         help="npm / GitHub Actions の Dependabot と Node CI の設定も追加する")
+                         help="npm の3日待機・Dependabot・Node CI の設定も追加する")
+    profile.add_argument("--python", action="store_true",
+                         help="uv の3日待機設定も追加する (既存 pyproject.toml は維持)")
     args = parser.parse_args()
     try:
         project = args.project.expanduser().resolve()
-        changes, kept = plan(project, args.github_actions, args.node)
+        changes, kept = plan(project, args.github_actions, args.node, args.python)
         for path, contents in changes:
             if args.write:
                 path.parent.mkdir(parents=True, exist_ok=True)

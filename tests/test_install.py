@@ -208,6 +208,27 @@ fi
         self.assertTrue((self.home / ".bashrc").is_symlink())
         self.assertTrue((repository / "src/project-presets/nextjs/biome-next.json").is_file())
 
+    def test_package_configs_are_linked_only_when_missing(self):
+        repository = self.prepare_install("Linux example")
+        configurations = (".npmrc", ".config/uv/uv.toml", ".config/pip/pip.conf")
+        self.run_bash('setOptions; setSymbolicLink "$PJ_ROOT/src" "$HOME"')
+        for name in configurations:
+            path = self.home / name
+            self.assertEqual(path.resolve(), repository / "src" / name)
+            path.unlink()
+            path.write_text("# synthetic-private-setting\n", encoding="utf-8")
+        result = self.run_bash('setOptions; setSymbolicLink "$PJ_ROOT/src" "$HOME"')
+        for name in configurations:
+            self.assertFalse((self.home / name).is_symlink())
+            self.assertEqual((self.home / name).read_text(), "# synthetic-private-setting\n")
+        self.assertNotIn("synthetic-private-setting", result.stdout + result.stderr)
+        # A manually placed dangling link must not be replaced either.
+        npmrc = self.home / ".npmrc"
+        npmrc.unlink()
+        npmrc.symlink_to(self.home / "missing-private-config")
+        self.run_bash('setOptions; setSymbolicLink "$PJ_ROOT/src" "$HOME"')
+        self.assertEqual(npmrc.readlink(), self.home / "missing-private-config")
+
     def test_codex_instructions_copy_to_custom_home(self):
         repository = self.prepare_install("Linux example")
         target = self.home / "custom codex"

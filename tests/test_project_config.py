@@ -87,9 +87,38 @@ class ProjectConfigTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue((self.project / ".github/workflows/check.yml").is_file())
         self.assertTrue((self.project / ".github/dependabot.yml").is_file())
+        self.assertEqual((self.project / ".npmrc").read_text(), "min-release-age=3\n")
         self.assertEqual((self.project / ".mise.toml").read_text(), original)
         self.assertFalse((self.project / "mise.toml").exists())
         self.assertFalse((self.project / "node_modules").exists())
+
+    def test_node_profile_preserves_existing_npm_configuration(self):
+        self.prepare_node()
+        original = "# synthetic-private-setting\nmin-release-age=7\n"
+        (self.project / ".npmrc").write_text(original)
+        result = self.run_init("--node", "--write")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.project / ".npmrc").read_text(), original)
+        self.assertNotIn("synthetic-private-setting", result.stdout + result.stderr)
+
+    def test_python_profile_creates_uv_config_and_preserves_pyproject(self):
+        preview = self.run_init("--python")
+        self.assertEqual(preview.returncode, 0, preview.stderr)
+        self.assertFalse((self.project / "uv.toml").exists())
+        result = self.run_init("--python", "--write")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.project / "uv.toml").read_text(), 'exclude-newer = "3 days"\n')
+        original = 'exclude-newer = "7 days"\n'
+        (self.project / "uv.toml").write_text(original)
+        self.assertEqual(self.run_init("--python", "--write").returncode, 0)
+        self.assertEqual((self.project / "uv.toml").read_text(), original)
+        (self.project / "uv.toml").unlink()
+        pyproject = '[tool.uv]\nindex-strategy = "first-index"\n'
+        (self.project / "pyproject.toml").write_text(pyproject)
+        result = self.run_init("--python", "--write")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.project / "uv.toml").exists())
+        self.assertEqual((self.project / "pyproject.toml").read_text(), pyproject)
 
     def test_node_profile_requires_ci_scripts_before_any_write(self):
         self.prepare_node({"test": "node --test"})

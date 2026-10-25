@@ -100,7 +100,9 @@ python3 ~/git/dotfiles/bin/sync-project-presets.py /path/to/app --init --write
 ```
 
 通常実行は変更予定の表示だけ。`--write` は共通プリセット2個とハッシュを記録する `manifest.json` を更新する。
-`--init` は、存在しない `biome.json`、`.editorconfig`、`.gitattributes`、`mise.toml` も作成する。
+`--init` は、存在しない `biome.json`、`.editorconfig`、`.gitattributes`、`mise.toml`、`.npmrc` も作成する。
+`.npmrc` は新しい依存の採用を3日待つ設定。既存ファイルは維持し、
+必要なキーの統合と対応版は[依存パッケージの待機期間](repository-maintenance.md#新しい依存パッケージの待機期間)を参照する。
 `package.json` の dependencies / devDependencies に TypeScript があれば、存在しない `tsconfig.json` も作成する。
 初期 TypeScript テンプレートは `src/` と `@/*` を想定しているため、構成に合わせて `paths` を調整する。
 Windows ネイティブで Python が導入済みの場合は `python3` の代わりに `py -3` を使える。

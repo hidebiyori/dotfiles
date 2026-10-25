@@ -170,6 +170,7 @@ python3 ~/git/dotfiles/bin/init-project-config.py /path/to/repository --github-a
 ```
 
 Node / npm のアプリでは次の `--node` を使う。npm と GitHub Actions の設定を用意する。
+新規の `.npmrc` には `min-release-age=3` を設定する。
 どちらの雛形も `open-pull-requests-limit: 0` とし、通常更新 PR は作らない。
 脆弱性はアラートで確認し、修正を手動で行う。
 セキュリティ更新 PR も停止するには、次の GitHub 側の設定を別途実施する。
@@ -230,10 +231,59 @@ Dependabotとパッケージ管理ツールの監査は対象範囲・集計単�
 公式情報は[Node.jsのセキュリティ情報](https://nodejs.org/en/security/)と
 [GitHubのglobal advisory API](https://docs.github.com/en/rest/security-advisories/global-advisories)を参照する。
 
+### 新しい依存パッケージの待機期間
+
+新しく依存を解決するときは、公開から3日以上経過したパッケージを選ぶ。
+端末全体の既定値に加え、npm / uv を使うプロジェクトにも設定をコミットする。
+対応版は npm 11.10.0 以降、相対期間に対応した uv、pip 26.1 以降。
+ツールが未導入なら設定を先に用意できるが、動作確認済みとは扱わない。
+
+| ツール | ユーザー設定の原本 / 配置先 (Linux) | プロジェクト設定 |
+| --- | --- | --- |
+| npm | [`src/.npmrc`](../src/.npmrc) → `~/.npmrc` | `.npmrc` に `min-release-age=3` |
+| uv | [`src/.config/uv/uv.toml`](../src/.config/uv/uv.toml) → `~/.config/uv/uv.toml` | `uv.toml` に `exclude-newer = "3 days"`、または `pyproject.toml` の `[tool.uv]` に同じキー |
+| pip | [`src/.config/pip/pip.conf`](../src/.config/pip/pip.conf) → `~/.config/pip/pip.conf` | プロジェクト単位の自動読込はない。必要な導入コマンドに `--uploaded-prior-to=P3D` を指定 |
+
+pip の設定は `[global]` セクションの `uploaded-prior-to = P3D`。
+Linux の設定再適用では、配置先がない場合だけこれらをリンクする。
+既存ファイルや手動リンクは認証・独自レジストリを含む可能性があるため維持し、値を表示せずに対象キーだけ個別に統合する。
+Windows ネイティブでは `~/.npmrc`、`%APPDATA%\uv\uv.toml`、`%APPDATA%\pip\pip.ini` に同じ内容を設定する。
+macOS の pip は `~/Library/Application Support/pip/pip.conf` 等、利用版の設定探索先も確認する。
+XDG・環境変数・CLI オプションで配置先や値を変更している場合は、実際の読み込み先を確認する。
+
+```bash
+python3 ~/git/dotfiles/bin/init-project-config.py /path/to/app --node --write
+python3 ~/git/dotfiles/bin/init-project-config.py /path/to/python-project --python --write
+```
+
+通常実行はプレビューのみ。既存の `.npmrc` / `uv.toml` は維持する。
+`pyproject.toml` がある場合、`--python` は `uv.toml` を作成しない。
+別の `uv.toml` を作ると既存の `[tool.uv]` が読まれなくなるため、既存ファイルへ手動で統合する。
+uv のトップレベル設定は `uv pip` にも適用されるが、`[pip]` の個別指定があればそちらが優先される。
+
+待機設定は新しい候補の選択に使う。既存の lockfile を安全性の検査結果として扱わず、
+`npm ci` や `uv sync --frozen` 等による固定済み依存の導入まで一律に拒否すると考えない。
+lockfile は維持し、設定確認のために依存を再インストールしない。
+npm は `npm config get min-release-age` が `3` であることを確認する。
+一部の版ではこの値が内部で `before` に変換されて `null` になるため、
+その場合は `npm config get before` の日時が実行時刻のおよそ3日前か確認する。
+pip は `python -m pip config get global.uploaded-prior-to` で対象キーだけ確認する。
+
+待機期間はセキュリティ修正版の採用も遅らせるため、脆弱性の確認は継続する。
+緊急の修正は対象と理由を確認し、そのコマンドだけ npm の `--min-release-age=0`、
+uv の `--exclude-newer=false`、pip の `--uploaded-prior-to=P0D` で解除できる。
+恒久的な除外や lockfile の更新を自動で行わず、修正版の内容と適用結果を確認する。
+
+仕様は [npm の設定](https://docs.npmjs.com/cli/v11/using-npm/config#min-release-age)、
+[uv の設定](https://docs.astral.sh/uv/reference/settings/#exclude-newer)と
+[配置・優先順位](https://docs.astral.sh/uv/concepts/configuration-files/)、
+[pip のアップロード日時フィルター](https://pip.pypa.io/en/stable/user_guide/#filtering-by-upload-time)を参照する。
+
 ## 新規リポジトリ作成時のチェックリスト
 
 - [ ] [初期設定](#改行編集設定)を導入し、用途に応じて Node CI などを選ぶ。
 - [ ] [ツールの固定方針](#miselock-の採用)を選び、採用時は lockfile と CI の `--locked` を揃える。
+- [ ] npm / uv / pip を使う場合は、対応版と[3日間の待機設定](#新しい依存パッケージの待機期間)を確認する。
 - [ ] [既定ブランチの保護](#既定ブランチの保護)の利用可否を先に確認し、利用できる場合は保護を設定する。利用できない制約と代わりの運用、直接編集の要件は個別の `AGENTS.md` に明記する。
 - [ ] 自動 PR を停止するリポジトリでは、Dependabot の全エコシステムの
   `open-pull-requests-limit` を `0` にする。既存設定は初期化コマンドで上書きされないため個別に確認する。

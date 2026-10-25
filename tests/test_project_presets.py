@@ -66,6 +66,7 @@ class ProjectPresetTests(unittest.TestCase):
         self.assertTrue((self.project / ".editorconfig").is_file())
         self.assertTrue((self.project / ".gitattributes").is_file())
         self.assertTrue((self.project / "mise.toml").is_file())
+        self.assertEqual((self.project / ".npmrc").read_text(), "min-release-age=3\n")
         manifest = json.loads((self.destination / "manifest.json").read_text())
         for name, expected in manifest["files"].items():
             self.assertEqual(hashlib.sha256((self.destination / name).read_bytes()).hexdigest(),
@@ -100,6 +101,14 @@ class ProjectPresetTests(unittest.TestCase):
                 alternative = ".mise.toml" if name == "mise.toml" else "mise.toml"
                 self.assertFalse((self.project / alternative).exists())
                 path.unlink()
+
+    def test_existing_npm_configuration_is_preserved(self):
+        original = "# synthetic-private-setting\nmin-release-age=7\n"
+        (self.project / ".npmrc").write_text(original)
+        result = self.run_sync("--init", "--write")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.project / ".npmrc").read_text(), original)
+        self.assertNotIn("synthetic-private-setting", result.stdout + result.stderr)
 
     def test_existing_jsonc_and_local_settings_are_preserved(self):
         files = {"biome.jsonc": '// Project override\n{"formatter": {"lineWidth": 100}}\n',
