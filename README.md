@@ -78,7 +78,7 @@ Linux のパッケージ管理は apt を使い、WSL では Windows 側の GUI 
 | [開発ツール](docs/development-tools.md) | 手動リンクを使う設定、mise / CLI、FFmpeg、unzip、GitHub 初回認証、Flutter、スキル用 Python |
 | [リポジトリ共通の保守](docs/repository-maintenance.md) | 新規リポジトリの確認項目、Dependabot の設定、CI の雛形、プリセット・文書リンク検証 |
 | [Next.js の共通設定](docs/project-presets.md) | Biome / TypeScript の原本・同期、初期テンプレート、プロジェクト固有設定との分担 |
-| [Webアプリの共通対応候補](docs/web-app-candidates.md) | ダークモード、キャッシュ優先表示、通信失敗・更新からの復帰、スマートフォン・アクセシビリティの確認項目 |
+| [Webアプリの共通対応候補](docs/web-app-candidates.md) | favicon、ダークモード、キャッシュ優先表示、通信失敗・更新からの復帰、スマートフォン・アクセシビリティの確認項目 |
 | [デスクトップアプリ](docs/desktop-apps.md) | OS 別の導入・更新、手動の表示・入力設定、Chromebook の最大化起動 |
 | [Codex の共通指示とスキル](docs/codex.md) | AGENTS.md の管理場所・同期、共通とプロジェクト固有の分担 |
 | [会話から得た共通知見](docs/learnings.md) | 知見の採用・公開前確認、再利用する判断基準と手順へのリンク |
