@@ -21,6 +21,8 @@ Biome は相対パスと npm パッケージの設定を `extends` で読み込�
 パッケージと Biome 本体は互換性のあるバージョンを明示し、lockfile とともに更新する。
 [Biome の共有設定](https://biomejs.dev/configuration/big-projects/)。
 
+文書の役割と見直し用の雛形は [文書の管理方針](documentation.md) を参照する。
+
 ## ディレクトリとコマンドの規約
 
 同じ役割のファイルは次の場所へ置く。利用しないディレクトリを空で作成する必要はない。
