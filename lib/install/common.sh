@@ -176,6 +176,16 @@ function setSymbolicLink()
       continue
     fi
 
+    # Package-manager configs may contain private registries and credentials.
+    # Keep existing files and manual links; merge the age setting separately.
+    if [[ "${srcPath}" == "${PJ_ROOT}/src/.npmrc" ||
+          "${srcPath}" == "${PJ_ROOT}/src/.config/uv/uv.toml" ||
+          "${srcPath}" == "${PJ_ROOT}/src/.config/pip/pip.conf" ]] &&
+       [[ -e "${dstPath}" || -L "${dstPath}" ]]; then
+      echo "${dstPath}: 既存設定を維持します。3日間の待機設定を docs/repository-maintenance.md で確認してください。" >&2
+      continue
+    fi
+
     if [ -d "${srcPath}" ]; then
       mkdir -p "${dstPath}"
       setSymbolicLink "${srcPath}" "${dstPath}"

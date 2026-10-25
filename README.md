@@ -62,6 +62,8 @@ Linux のパッケージ管理は apt を使い、WSL では Windows 側の GUI 
   alias の変更はターミナルを開き直すか `r` で反映する。
 - Python / Node / npm / Firebase CLI は [mise の共通設定](src/.config/mise/config.toml)で管理する。
   `up` はプロジェクトの依存関係を更新しない。詳細は[共通環境の更新](docs/development-tools.md#共通環境の更新)。
+- npm・uv・対応版 pip は新しい依存の採用を3日待つ。既存設定への統合・各プロジェクトへの導入は
+  [依存パッケージの待機期間](docs/repository-maintenance.md#新しい依存パッケージの待機期間)を参照する。
 - 同じ設定リンク・コピー・導入済みアプリを再利用する。Downloads / MyDrive の実ディレクトリは維持する。
   Windows / Mac の対象アプリを明示更新する方法は[アプリ管理](docs/desktop-apps.md)を参照する。
 - 通信・権限・検証の失敗時は停止する。原因を解消して再実行する。途中の反映は自動で巻き戻さない。

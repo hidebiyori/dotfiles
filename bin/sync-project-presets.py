@@ -107,7 +107,7 @@ def plan(project, initialize):
 
     kept = []
     if initialize:
-        templates = ["biome.json", ".editorconfig", ".gitattributes", "mise.toml"]
+        templates = ["biome.json", ".editorconfig", ".gitattributes", "mise.toml", ".npmrc"]
         if "typescript" in dependencies:
             templates.append("tsconfig.json")
         for name in templates:
@@ -121,7 +121,7 @@ def plan(project, initialize):
                 kept.extend(path.name for path in existing)
             else:
                 common = {".editorconfig": ".editorconfig", ".gitattributes": ".gitattributes",
-                          "mise.toml": "mise-node.toml"}
+                          "mise.toml": "mise-node.toml", ".npmrc": ".npmrc"}
                 source = COMMON / common[name] if name in common else SOURCE / "templates" / name
                 changes.append((project / name, source.read_bytes()))
     return changes, kept
