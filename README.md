@@ -77,6 +77,7 @@ Linux のパッケージ管理は apt を使い、WSL では Windows 側の GUI 
 | [Windows のキー設定](docs/windows-keyboard.md) | 常駐なしの左 Win → Alt、元に戻す方法、Copilot / Fn の制約 |
 | [開発ツール](docs/development-tools.md) | 手動リンクを使う設定、mise / CLI、FFmpeg、unzip、GitHub 初回認証、Flutter、スキル用 Python |
 | [リポジトリ共通の保守](docs/repository-maintenance.md) | 新規リポジトリの確認項目、Dependabot の設定、CI の雛形、プリセット・文書リンク検証 |
+| [文書の管理方針と雛形](docs/documentation.md) | 現在の仕様・手順を正本にする規約、README・構成・開発・運用の雛形 |
 | [Next.js の共通設定](docs/project-presets.md) | Biome / TypeScript の原本・同期、初期テンプレート、プロジェクト固有設定との分担 |
 | [Webアプリの共通対応候補](docs/web-app-candidates.md) | favicon、ダークモード、キャッシュ優先表示、通信失敗・更新からの復帰、スマートフォン・アクセシビリティの確認項目 |
 | [デスクトップアプリ](docs/desktop-apps.md) | OS 別の導入・更新、手動の表示・入力設定、Chromebook の最大化起動 |
