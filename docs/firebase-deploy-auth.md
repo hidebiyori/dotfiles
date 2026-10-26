@@ -1,6 +1,6 @@
 # Firebase / GitHub Actions の公開認証
 
-GitHub Actions の Firebase Hosting 公開を設定する際の共通手順。
+ローカルの Firebase 管理操作と、GitHub Actions の Firebase Hosting 公開で使う認証の共通手順。
 Secret が見つからない場合も、認証に使える設定と権限を確認してから、
 不足している操作を判断する。認証情報の値は文書・チャット・ログへ残さない。
 この汎用手順は共通 `AGENTS.md` から参照する。実際のプロジェクト ID・Hosting target・
@@ -18,9 +18,11 @@ Secret が見つからない場合も、認証に使える設定と権限を確�
 
 ```bash
 command -v gcloud
+command -v firebase
 command -v gh
 gh secret list --repo OWNER/REPO
 test -f "$HOME/.config/gcloud/application_default_credentials.json"
+test -f "$HOME/.config/configstore/firebase-tools.json"
 ```
 
 既存 workflow が Secret を使っていることと、現在のアカウントがその Secret を
@@ -42,6 +44,39 @@ CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE="$HOME/.config/gcloud/application_default
 プロジェクトの読み取り成功だけでは、API 有効化・IAM 変更・公開権限までは証明できない。
 失敗時は認証失敗と権限不足を区別し、実行結果に応じて必要なログインや権限を伝える。
 ADC の JSON、refresh token、access token、秘密鍵は表示しない。
+
+## ADC がない場合の既存 Firebase CLI ログイン
+
+Firebase CLI、gcloud CLI、ADC、GitHub Actions の OIDC は別の認証経路。
+ADC の不在や CLI が PATH にないことだけで、再ログインが必要とは判断しない。
+導入済みツールの配置と、操作する環境の既存ログインを先に確認する。
+Windows と WSL / Linux の保存先は分けて確認し、認証ファイルを複製しない。
+
+Linux / WSL の通常の CLI 保存先は `~/.config/configstore/firebase-tools.json`。
+内容を表示せず、ログイン・短期トークン・有効期限の有無だけを調べる。
+利用可能な短期アクセストークンをメモリ内で再利用し、期限切れの場合は
+導入済み CLI の既存ログインの更新処理を使う。トークンやクライアント秘密情報を
+別ファイル・チャット・ログ・コミットへ保存しない。
+
+Firestore の Node.js SDK で再利用する場合は、最初のデータ操作より前に認証を設定する。
+SDK が使う `google-gax` の依存経路から互換性のある `GoogleAuth` と `OAuth2Client` を読み込み、
+短期トークンを設定した `OAuth2Client` を `GoogleAuth` の `authClient` に渡す。
+Firestore の `auth` には、その `GoogleAuth` を渡す。
+
+```javascript
+// client は短期トークンを設定済みの OAuth2Client、db は対象の Firestore。
+const auth = new GoogleAuth({ projectId, authClient: client });
+db.settings({ auth });
+```
+
+接続設定と管理コマンドは同じプロセス・同じ Firestore インスタンスを使う。
+別プロセスへメモリ内の設定は引き継がれない。
+この方法は Linux / WSL の導入済み SDK で読み取りを確認した接続方法であり、
+CLI・SDK の配置や依存バージョンを変えた場合は、対象データの読み取りだけで再確認する。
+
+プロジェクト管理 API の成功と、対象 Firestore データの取得成功は別に確認する。
+追加スコープ要求の `restricted_client` や SDK の認証エラーだけで既存ログイン全体を無効とせず、
+SDK 設定・有効期限・通信・対象データへの権限を切り分けてから再認証の必要性を判断する。
 
 ## GitHub Actions からの公開
 
