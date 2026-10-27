@@ -1,7 +1,7 @@
 # dotfiles の変更・検証
 
 - GitHub の `main` は ruleset で保護している。PR と `linux` / `windows` の CI 成功、
-  マージ前のブランチ最新化を必須とし、force push とブランチ削除は禁止する。
+  マージ前のブランチ最新化を必須とし、`main` の force push と削除は禁止する。
   承認人数は 0、通常の bypass は設けていない。シークレットスキャンと push protection は有効。
   保護の共通手順と再確認事項は [リポジトリ保守](docs/repository-maintenance.md#既定ブランチの保護)を参照する。
 - 共通設定は `src/` で管理する。秘密情報と非公開プロジェクトの名前・パス・設定値は公開ファイルへ追加しない。
