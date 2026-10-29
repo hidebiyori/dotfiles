@@ -154,6 +154,37 @@ mise exec --cd "$HOME" -- python3 --version
 OS の Python とスキル用の既存仮想環境は、mise の共通 Python を追加しても置き換えない。
 [mise の Python 管理](https://mise.jdx.dev/lang/python.html)を参照。
 
+### Ubuntu のシステム Python のセキュリティ更新
+
+Ubuntu のパッケージや `/usr/bin/python3` を指定するスクリプトは、mise とは別に OS の Python を使う。
+スキル用の仮想環境も、作成時の Python を参照し続ける。どの環境が使われているかは次で確認できる。
+
+```bash
+/usr/bin/python3 --version
+mise exec --cd "$HOME" -- python3 --version
+~/.local/share/codex-skill-python/bin/python -I -c 'import sys; print(sys.version); print(sys._base_executable)'
+```
+
+仮想環境のコマンドは環境が存在する場合に実行する。mise を更新しても OS や別の仮想環境は更新されない。
+Ubuntu は修正を既存バージョンにバックポートすることがあるため、上流のバージョン番号だけで判断せず、
+[Ubuntu のセキュリティ情報](https://ubuntu.com/security/notices)で対象 CVE・Ubuntu の版・パッケージの修正状態を確認する。
+
+修正済みパッケージが公開されたら、管理者権限のある端末で apt の情報を更新し、候補と導入予定を確認する。
+次は Python 3.14 の例で、対象バージョンと関連パッケージは利用環境の告知に合わせる。
+
+```bash
+sudo apt update
+apt-cache policy python3.14 python3.14-minimal libpython3.14 libpython3.14-minimal libpython3.14-stdlib
+apt-get --simulate install --only-upgrade python3.14 python3.14-minimal libpython3.14 libpython3.14-minimal libpython3.14-stdlib
+sudo apt install --only-upgrade python3.14 python3.14-minimal libpython3.14 libpython3.14-minimal libpython3.14-stdlib
+dpkg-query -W python3.14 python3.14-minimal libpython3.14 libpython3.14-minimal libpython3.14-stdlib
+/usr/bin/python3 --version
+```
+
+候補が未修正・評価中なら更新済みと扱わず、告知と候補を再確認する。導入後はパッケージの版と告知を照合する。
+OS の Python のシンボリックリンクを mise の Python に差し替えず、OS のパッケージ管理で更新する。
+仮想環境が別の実行ファイルを参照する場合は、その参照先も別に確認する。
+
 ## FFmpeg（プロジェクトごと）
 
 動画・音声処理に必要なリポジトリの `mise.toml` で `conda:ffmpeg` のバージョンを指定する。
