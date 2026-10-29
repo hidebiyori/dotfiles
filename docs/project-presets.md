@@ -74,7 +74,7 @@ mise 設定の名前は `mise.toml` を基本にし、既存の `.mise.toml` は
 | EditorConfig / Git 属性 | [共通の初期テンプレート](repository-maintenance.md)。UTF-8、LF、最終改行、スペース2個と拡張子別の例外 | 導入後の `.editorconfig` / `.gitattributes`。変更は各リポジトリで管理 |
 | Node / パッケージ管理 | Node はプロジェクトの mise 設定、開発ツールは `package.json` と lockfile。CI もプロジェクトの指定に合わせる | Node の具体的な版、必要なツール。パッケージ管理ツールの移行は別途判断 |
 | npm scripts | `dev` / `build` / `check` / `format` / `typecheck` / `test:ci` などの入口を揃える | ビルド前後の処理、実際のテストコマンド。JS のみなら `typecheck` は不要 |
-| テスト | CI は watch なしで終了するコマンドにする | Node test runner / Jest / Vitest、テスト対象、ブラウザ検証の要否 |
+| テスト | [Vitest を統一候補として評価](repository-maintenance.md#javascript--typescript-のテストランナー)。CI は watch なしで終了するコマンドにする | ランナーの採否・移行、テスト対象、ブラウザ検証の要否 |
 | GitHub Actions | [Node CI の雛形](repository-maintenance.md#node--npm-の-ci)。品質チェックの順序とキャッシュ方針 | 公開ジョブ、認証、権限、成果物、プロジェクト固有の検証 |
 | 依存更新 | [Dependabot の雛形](repository-maintenance.md#依存更新)。自動 PR は停止し、GitHub 側の設定も共通コマンドで確認 | 脆弱性の確認、手動更新と互換性の判断 |
 | Next.js / CSS / UI | 採用する構成の方針や新規作成用テンプレート | `output`、画像、ヘッダー、公開先、Tailwind 等の採用、テーマや画面設計 |

@@ -150,6 +150,23 @@ PR と main の実行条件を設計し、必要・不要・混在する変更�
 設定後は ruleset の必須チェックと実際の PR の結果を確認する。
 [GitHub の必須チェックのトラブルシューティング](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)。
 
+## JavaScript / TypeScript のテストランナー
+
+プロジェクト間でテストの書き方と保守を揃えるため、Vitest を統一候補として優先的に評価する。
+候補であり全プロジェクトへの採用は未決定。新規導入や既存テストの見直しでは、対象の Node・フレームワークとの
+互換性、必要な機能、追加依存、CI の負荷と移行費用を確認し、各プロジェクトで採否を決める。
+シンプルなテストに既存の `node:test` が適している場合は継続できる。統一だけを理由に一括移行しない。
+
+移行時は既存のテスト対象と実行数を把握し、新旧の検出結果と CI の実行コマンドを照合する。
+Jest からの移行では globals、モジュールのモック、タイマー、スナップショット、TypeScript のパス解決などの
+差を確認し、期待する振る舞いを維持する。実行成功だけで失われたテストがないとは判断しない。
+[Vitest の Jest 移行ガイド](https://vitest.dev/guide/migration/jest)を参照する。
+
+画面テストでは DOM 環境や Testing Library 等の必要性を検討し、単体テストと実ブラウザ・統合テストの範囲を区別する。
+Next.js の非同期 Server Components は Vitest の単体テストに制約があり、必要に応じて E2E を検討する。
+[Next.js の Vitest ガイド](https://nextjs.org/docs/app/guides/testing/vitest)を参照する。
+変更後は lockfile の依存経路と脆弱性、実行環境・CI の互換性も確認する。
+
 ## GitHub Actions の成果物とストレージ
 
 Artifact の保持期間は、用途とダウンロード元を確認して `actions/upload-artifact` ごとに
