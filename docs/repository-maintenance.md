@@ -150,6 +150,27 @@ PR と main の実行条件を設計し、必要・不要・混在する変更�
 設定後は ruleset の必須チェックと実際の PR の結果を確認する。
 [GitHub の必須チェックのトラブルシューティング](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)。
 
+## GitHub Actions の成果物とストレージ
+
+Artifact の保持期間は、用途とダウンロード元を確認して `actions/upload-artifact` ごとに
+`retention-days` で指定する。同一実行内の一時的な受け渡しは3日程度、テスト・デバッグ用は
+7日程度を目安とし、公開・復旧に必要な成果物は利用期間に合わせて設定する。使わない成果物は
+アップロードをやめる。日数は目安であり、後続ワークフロー、再実行、手動ダウンロードの期限を優先する。
+設定は新規 Artifact に適用され、既存のものには遡及しない。
+
+公開済み資産の復元やバックアップに使う Artifact は、次の実行までの間隔や失敗時の復旧も考慮する。
+保持期限を短くして全世代が失効すると、次の公開に支障が出る場合がある。削除時は一覧・作成日時・
+サイズ・用途・依存関係を確認し、現用や復旧に必要なものと用途不明のものを保護する。
+リポジトリ全体の保持期間はチェック結果、ワークフロー実行履歴やログにも影響するため、
+Artifact だけを減らす目的で安易に短縮しない。
+
+Actions の Artifact と GitHub Packages はストレージ枠を共有し、Actions Cache は別枠で管理される。
+ストレージは月内の使用量を時間積算するため、削除後も当月の積算は戻らない。
+現在の保存量と請求画面の使用量、実行分数を区別して確認する。Cache は未アクセス期間や容量に応じて
+GitHub が削除する。設定や上限の詳細は [Actions の料金](https://docs.github.com/en/billing/concepts/product-billing/github-actions)、
+[Cache の制限と削除](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#usage-limits-and-eviction-policy)、
+[保持期間の設定](https://docs.github.com/en/actions/tutorials/store-and-share-data#configuring-a-custom-artifact-retention-period)を参照する。
+
 ## 改行・編集設定
 
 導入済みの Python 3 で、変更予定を確認してから反映する。
