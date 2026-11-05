@@ -167,6 +167,14 @@ Next.js の非同期 Server Components は Vitest の単体テストに制約が
 [Next.js の Vitest ガイド](https://nextjs.org/docs/app/guides/testing/vitest)を参照する。
 変更後は lockfile の依存経路と脆弱性、実行環境・CI の互換性も確認する。
 
+## 制限付き実行環境でのGit操作とNode検証
+
+ソースファイルへの書き込みが許可されていても、実行環境によっては `.git` の書き込みが拒否される。ブランチ作成・ステージなどが `.git/...lock: Read-only file system` で失敗したら、まず作業ツリーと差分を確認し、同じ対象の操作だけを許可された実行文脈で再試行する。`.git` の権限変更や別経路での履歴書き換えは行わず、PR・CIの手順を維持する。
+
+Next.jsのビルド・検証では、TypeScript CLIやテストランナーの子プロセス起動が `EPERM` で拒否されることがある。`Could not parse output from TypeScript's --showConfig` は、設定JSONの誤りとは限らず、子プロセスが起動できず出力が空だった場合にも表面化する。まず失敗したプロセスと実際の `EPERM` を確認し、必要なら型検査などの導入済みコマンドで切り分ける。制限が原因と確認できた場合は、依存の再導入・設定変更をせず、同じツールチェーンと検証コマンドを許可された実行文脈で再試行する。通常権限での失敗と昇格後の成功、CIの結果は別々に記録する。
+
+Gitや検証コマンドの実行権限を一律に広げず、失敗原因を確認した上で、すでに許可された作業に必要な操作だけを再試行する。
+
 ## GitHub Actions の成果物とストレージ
 
 Artifact の保持期間は、用途とダウンロード元を確認して `actions/upload-artifact` ごとに
