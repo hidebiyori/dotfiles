@@ -150,6 +150,27 @@ PR と main の実行条件を設計し、必要・不要・混在する変更�
 設定後は ruleset の必須チェックと実際の PR の結果を確認する。
 [GitHub の必須チェックのトラブルシューティング](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)。
 
+## GitHub Actions の依存ロック
+
+GitHub Actions workflow lockfile は GitHub.com の Free、Team、Enterprise Cloud で利用できる。
+`.github/workflows/actions.lock` は公式の [`gh-actions-lock`](https://github.com/github/gh-actions-lock)
+拡張で生成し、手で編集しない。ロック済み workflow は直接参照した action と推移依存の記録済み commit を実行する。
+[workflow dependency lockfile の仕様](https://docs.github.com/en/actions/concepts/security/workflow-dependency-lockfiles)を参照する。
+
+導入前に各 `uses:` が意図した現行版を参照していることを確認し、`gh actions-lock` を実行する。
+生成時に workflow の参照がより具体的なタグへ書き換わることがあるため、workflow と lockfile の両方をレビューする。
+Reusable workflow 呼び出し（`jobs.<job_id>.uses`）とコンテナ image は対象外で、別に commit SHA や image digest を確認する。
+ローカル `./` action も自動では固定されないため、利用時は公式手順に沿って移行方法を選ぶ。
+
+CI では `gh actions-lock --verify` を実行し、lockfile と workflow の不一致や参照元で検証できない pin を検出する。
+公式の拡張をリリース版に固定し、GitHub API 読み取り用の `GH_TOKEN` には必要最小限の権限を与える。
+workflow の追加や action 参照の追加・変更・削除後は再生成する。
+Dependabot はロック済み workflow の action 更新 PR では対応する lockfile も更新するが、未導入 workflow は更新しない。
+通常の Dependabot 更新 PR を停止している場合は、action の参照を変更するときに手動で再生成・検証する。
+
+段階導入ではまず1リポジトリで lock と CI を確認し、依存更新時の再生成手順も確かめてから、各リポジトリの reusable workflow・ローカル action・コンテナ利用を調べて展開する。
+lockfile は action の安全性を保証しないため、依存を更新する差分は通常の依存変更としてレビューする。
+
 ## JavaScript / TypeScript のテストランナー
 
 プロジェクト間でテストの書き方と保守を揃えるため、Vitest を統一候補として優先的に評価する。

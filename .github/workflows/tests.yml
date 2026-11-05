@@ -17,9 +17,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
+      - name: Verify Actions dependency lockfile
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh extension install github/gh-actions-lock --pin v0.4.0
+          gh actions-lock --verify
       - name: Shell syntax
         run: |
           for file in bin/*.sh lib/install/*.sh src/.bash_profile src/.bashrc src/bin/git-* src/bin/wsl-browser; do
@@ -34,7 +40,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
       - name: Windows PowerShell 5.1 tests with stubbed installers
