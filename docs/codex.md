@@ -56,6 +56,8 @@ WSL 内の Codex CLI の既定保存先は `~/.codex` で、Windows アプリと
 
 自作スキルは `src/.agents/skills/<skill-name>/SKILL.md` に置き、セットアップで
 `~/.agents/skills` 以下へファイル単位でリンクする。
+dotfiles 自身を作業するときは、チェックアウト内の `src/.agents/skills/<skill-name>/SKILL.md` を原本として参照する。
+`~/.agents/skills` はセットアップ後の配置先なので、未配置の環境でも原本はリポジトリ内から読める。
 
 - `japanese-commit`: 日本語の件名と複数行の本文に変更内容・理由・検証結果を書く。
 - `npm-vulnerability-remediation`: Dependabot の検知を確認し、対象を絞って依存更新・検証する。
