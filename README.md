@@ -79,6 +79,7 @@ Linux のパッケージ管理は apt を使い、WSL では Windows 側の GUI 
 | [Windows のキー設定](docs/windows-keyboard.md) | 常駐なしの左 Win → Alt、元に戻す方法、Copilot / Fn の制約 |
 | [開発ツール](docs/development-tools.md) | 手動リンクを使う設定、mise / CLI、FFmpeg、unzip、GitHub 初回認証、Flutter、スキル用 Python |
 | [リポジトリ共通の保守](docs/repository-maintenance.md) | 新規リポジトリの確認項目、Dependabot の設定、CI の雛形、プリセット・文書リンク検証 |
+| [ライセンスの共通方針](docs/licensing.md) | GPLv3 の適用範囲、配布時の条件、第三者の著作物の確認 |
 | [文書の管理方針と雛形](docs/documentation.md) | 現在の仕様・手順を正本にする規約、README・構成・開発・運用の雛形 |
 | [Next.js の共通設定](docs/project-presets.md) | Biome / TypeScript の原本・同期、初期テンプレート、プロジェクト固有設定との分担 |
 | [Webアプリの共通対応候補](docs/web-app-candidates.md) | favicon、フォント、ダークモード、キャッシュ優先表示、任意候補のオフライン起動・閲覧、通信失敗・更新からの復帰、スマートフォン・アクセシビリティの確認項目 |
@@ -91,3 +92,8 @@ Linux のパッケージ管理は apt を使い、WSL では Windows 側の GUI 
 共通の行動規則は [`src/.codex/AGENTS.md`](src/.codex/AGENTS.md)、
 このリポジトリの変更・検証規則は [`AGENTS.md`](AGENTS.md) で管理する。
 公開ファイルには汎用手順を置き、プロジェクト固有の情報は各プロジェクト内で管理する。
+
+## ライセンス
+
+自作のプログラムコードは [GNU General Public License v3.0 only](LICENSE)（`GPL-3.0-only`）です。
+文章・画像などのコード以外の内容や第三者の著作物には、それぞれの権利・条件が適用されます。
