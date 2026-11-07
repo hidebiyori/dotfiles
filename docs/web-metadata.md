@@ -48,6 +48,43 @@ WebサイトやWebアプリを作るとき、公開範囲や共有方法に応�
 [サイトマップの作成](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap)、
 [canonicalの指定](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls)を参照する。
 
+## 家族向けサイトを検索非掲載にする場合
+
+家族向けなどで検索掲載を望まない場合は、公開HTMLのrobots metaと必要なHTTPヘッダーに `noindex` を指定する。
+検索エンジンがその指示を取得できるよう、robots.txtで対象ページを一律に `Disallow` しない。
+非公開データを扱う場合は別途、取得元で認証・認可を実施する。
+
+AI学習・データ収集への利用も控えてほしい場合、例えば以下のように、対応する識別子を個別に制限する。
+`*` は通常の検索クローラーが `noindex` を確認できるよう許可する。サイトマップを設けるかどうかは別に判断する。
+
+```text
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: *
+Allow: /
+```
+
+`GPTBot` と `ClaudeBot` はそれぞれの提供元の学習用クローラー、`CCBot` は幅広い研究等にも使われるCommon Crawlの収集用。
+`Google-Extended` は別のクローラーではなく、Googleが取得した内容のGeminiの学習・回答への利用等を制御する識別子。
+詳細は [OpenAI](https://developers.openai.com/api/docs/bots)、
+[Anthropic](https://support.claude.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler)、
+[Google](https://developers.google.com/crawling/docs/crawlers-fetchers/google-common-crawlers)、
+[Common Crawl](https://commoncrawl.org/ccbot) の説明を参照する。これらは対象を限定した要請で、すべての収集の防止を保証しない。
+
+通常のCLI・Codexからの公開画面の動作確認には、専用のクローラー許可は不要。ツールによってrobots.txtの扱いは異なり、
+ユーザーの操作に応じた [ChatGPT-User](https://developers.openai.com/api/docs/bots) は自動収集用の `GPTBot` と異なる。
+認証が必要な画面・データの確認には、そのアクセス権が別途必要となる。
+
 ## 実装・公開時の確認
 
 1. 各ページの公開範囲と検索掲載の意図、正規オリジン、現在の設定・生成元・配信設定を確認する。
