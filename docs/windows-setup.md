@@ -68,20 +68,34 @@ Steam だけの導入・確認方法は [Steam（任意）](desktop-apps.md#stea
 - WSL には Linux GUI アプリ、日本語入力、ChromeOS 用のリンク・ランチャーを導入しない。
   Node / npm と認証情報は Windows 側と共有しない。開発リポジトリと依存ディレクトリは WSL の `~/git` に置く。
 
-## Codex を WSL で使う設定
+## Windows 版 Codex と WSL の併用
 
-導入後にアプリ内で一度設定する。セットアップスクリプトはこの設定を変更しない。
+Computer Use で Windows アプリを操作し、開発に WSL のツールを使う場合は、
+エージェントを **Windows native**、統合ターミナルを **WSL** にする。導入後にアプリ内で設定する。
 
-1. **Settings → Agent environment → WSL** を選ぶ。
-2. **Integrated terminal shell → WSL** も選ぶ。エージェントとは独立した設定。
-3. 進行中の作業を終えてアプリを再起動する。
+1. **Settings → Agent environment → Windows native** を選ぶ。エージェントは PowerShell でコマンドを実行する。
+2. **Integrated terminal shell → WSL** を選ぶ。エージェントとは独立した設定で、新しいターミナルに適用される。
+3. エージェントの設定を変更した場合は、進行中の作業を終えてアプリを再起動する。
 4. [README のパス](../README.md#windows-codex-でプロジェクトを追加するとき)で対象フォルダーを追加する。
 
-新しいチャットで `pwd` が `/home/<Linuxユーザー名>/git/<リポジトリ名>`、`uname -s` が `Linux` になることを確認する。
-統合ターミナルも新しく開いて確認する。
-Windows 側の Codex 保存先と共通指示の同期は [Codex の管理手順](codex.md#配置と同期)を参照する。
+Computer Use は **Settings → Computer use** で利用可否を確認し、案内に沿って有効にする。
+Windows をロック解除して対象アプリを表示する。操作中は Computer Use が同じデスクトップのマウスとキーボードを使う。
+[公式の Computer Use の手順](https://learn.chatgpt.com/docs/computer-use)。
 
+WSL に置いたリポジトリの Git・ビルド・テストは WSL 側で実行する。新しい統合ターミナルで対象フォルダーへ移動し、
+`pwd` が `/home/<Linuxユーザー名>/git/<リポジトリ名>`、`uname -s` が `Linux` になることを確認する。
+エージェントの PowerShell から WSL のコマンドを呼ぶ場合は、ディストリビューションと Linux 側の作業ディレクトリを指定する。
+
+```powershell
+wsl.exe -d Ubuntu --cd '/home/<Linuxユーザー名>/git/<リポジトリ名>' -- git status --short
+```
+
+WSL 側のファイルを UNC パスで開く場合、Windows 側でのファイル操作や Git の状態表示に制約が出ることがある。
+サンドボックスで `wsl.exe` の起動が制限される場合は、WSL の統合ターミナルで `git` などを直接実行する。
+開発作業が Linux 中心でエージェントに WSL のツールを直接使わせたい場合は、**Agent environment → WSL** を選んでアプリを再起動する。
 [公式の Windows / WSL 設定](https://learn.chatgpt.com/docs/windows/windows-app#windows-subsystem-for-linux-wsl)。
+
+Windows 側の Codex 保存先と共通指示の同期は [Codex の管理手順](codex.md#配置と同期)を参照する。
 
 ## 導入後の確認と認証
 

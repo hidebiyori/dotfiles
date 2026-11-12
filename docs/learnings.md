@@ -62,6 +62,7 @@ dotfiles に安全に反映できない場合は、非公開の識別情報を�
 | 個人利用中心のサービスで保存済み画面を再表示するとき | キャッシュの読み出しと描画だけを最優先にし、それ以外は表示後へ回す。認証復元・SDK起動・権限確認等を待ってからキャッシュを出す構成にしない | [キャッシュ表示の基本方針](web-app-candidates.md#キャッシュ表示の基本方針) |
 | Webアプリのオフライン対応を検討するとき | 必須対応にせず、利用価値とCI・更新・ブラウザー検証を含む保守の負担が見合う場合の任意候補とする。閲覧と書き込み・再送は別に採否を決める | [共通の検討事項](web-app-offline.md)、[判断の理由](adr/0002-offline-scope.md) |
 | ローカル・別 OS・CI の検証結果を報告するとき | 実行した環境と検証対象を明記する。スタブを使ったテストの成功だけで、実際のアプリ導入や UI 動作まで確認したと扱わない | [dotfiles の検証規則](../AGENTS.md)、[共通の作業品質](../src/.codex/AGENTS.md#作業品質の維持) |
+| Windows の Computer Use と WSL の開発環境を併用するとき | Windows native のエージェントを使い、統合ターミナルは WSL に設定する。WSL に置いたリポジトリの Git・ビルド・テストは WSL 側で実行する | [Windows 版 Codex と WSL の併用](windows-setup.md#windows-版-codex-と-wsl-の併用) |
 | Windows アプリから WSL の定期タスクを実行するとき | 登録状態と結果を区別する。毎回の新規スレッド作成に失敗する場合は、利用者の希望に応じて同じスレッドに戻る方式を試し、通知の受信と応答を確認する | [Windows と WSL の定期タスク](codex.md#windows-と-wsl-の定期タスク) |
 | 制限付き実行環境でGit操作やNext.js検証が失敗するとき | `.git` の読み取り拒否や子プロセスの `EPERM` を確認してから、すでに許可された操作・同じ導入済みコマンドだけを許可された実行文脈で再試行する。権限や依存を一律に広げない | [制限付き実行環境でのGit操作とNode検証](repository-maintenance.md) |
 | Playwright 1.62.1 の `waitForFunction` で非同期条件を待つとき | Promise 自体が真と判定され、解決値が偽でも待機が終わり得る。結果を明示的に取得して期限付きで再評価し、バージョンを変更したら挙動を再確認する | [Playwright 1.62.1 の判定実装](https://github.com/microsoft/playwright/blob/v1.62.1/packages/playwright-core/src/server/frames.ts#L1491-L1535) |
