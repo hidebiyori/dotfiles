@@ -10,12 +10,13 @@ Mac、Chromebook の Linux 開発環境、Windows 11 / WSL2 で使う共通設�
 | 使う場所 | 同じプロジェクトを指すパスの例 |
 | --- | --- |
 | Windows の Codex / フォルダー選択 | `\\wsl$\Ubuntu\home\hidebiyori\git\dotfiles` |
-| WSL のターミナル / Codex の作業ディレクトリ | `/home/hidebiyori/git/dotfiles`（`~/git/dotfiles`） |
+| WSL のターミナル / WSL で実行するコマンド | `/home/hidebiyori/git/dotfiles`（`~/git/dotfiles`） |
 
 **Add new project / `Ctrl+O` → `\\wsl$\` → ディストリビューション → `home` → Linux ユーザー → `git` → 対象フォルダー**。
 `Ubuntu` は `wsl --list --quiet` の登録名、ユーザー名は WSL 内の `whoami` に合わせる。
 新規リポジトリも WSL の `~/git/<名前>` に作成してから、同じ方法で追加する。
-エージェントと統合ターミナルは WSL に設定する。[初回設定と確認](docs/windows-setup.md#codex-を-wsl-で使う設定)。
+Computer Use と WSL の開発環境を併用するときは、エージェントを **Windows native**、統合ターミナルを **WSL** に設定する。
+[設定と確認](docs/windows-setup.md#windows-版-codex-と-wsl-の併用)。
 
 ## セットアップ
 
@@ -75,7 +76,7 @@ Linux のパッケージ管理は apt を使い、WSL では Windows 側の GUI 
 
 | 文書 | 内容 |
 | --- | --- |
-| [Windows / WSL2](docs/windows-setup.md) | 初回導入、オプション、Codex の WSL 設定、エラー時の扱い |
+| [Windows / WSL2](docs/windows-setup.md) | 初回導入、オプション、Windows 版 Codex と WSL の併用、エラー時の扱い |
 | [Windows のキー設定](docs/windows-keyboard.md) | 常駐なしの左 Win → Alt、元に戻す方法、Copilot / Fn の制約 |
 | [開発ツール](docs/development-tools.md) | 手動リンクを使う設定、mise / CLI、FFmpeg、unzip、GitHub 初回認証、Flutter、スキル用 Python |
 | [リポジトリ共通の保守](docs/repository-maintenance.md) | 新規リポジトリの確認項目、Dependabot の設定、CI の雛形、プリセット・文書リンク検証 |
