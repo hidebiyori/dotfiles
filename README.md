@@ -30,6 +30,7 @@ Windows アプリ、WSL2、WSL 内の clone とセットアップを順に準備
 Git for Windows や Windows 側での手動 clone は事前準備に不要。
 Steam は [`-IncludeSteam` を指定した場合だけ](docs/desktop-apps.md#steam任意)追加できる。
 左 Win → Alt の設定は、[キー設定の専用コマンド](docs/windows-keyboard.md)で任意に適用できる。
+Brother HL-L3230CDW は、[プリンターの登録手順](docs/windows-setup.md#brother-hl-l3230cdw-の登録)で追加できる。
 
 ### Mac / Chromebook / 準備済みの WSL2
 

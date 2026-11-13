@@ -67,6 +67,7 @@ dotfiles に安全に反映できない場合は、非公開の識別情報を�
 | 制限付き実行環境でGit操作やNext.js検証が失敗するとき | `.git` の読み取り拒否や子プロセスの `EPERM` を確認してから、すでに許可された操作・同じ導入済みコマンドだけを許可された実行文脈で再試行する。権限や依存を一律に広げない | [制限付き実行環境でのGit操作とNode検証](repository-maintenance.md) |
 | Playwright 1.62.1 の `waitForFunction` で非同期条件を待つとき | Promise 自体が真と判定され、解決値が偽でも待機が終わり得る。結果を明示的に取得して期限付きで再評価し、バージョンを変更したら挙動を再確認する | [Playwright 1.62.1 の判定実装](https://github.com/microsoft/playwright/blob/v1.62.1/packages/playwright-core/src/server/frames.ts#L1491-L1535) |
 | WindowsでAppData内のファイルを別プロセスで使うとき | 起動元によってAppDataへの書き込みがアプリ専用領域へ仮想化される場合がある。作成元での存在確認だけに頼らず、実行する側から同じ設定・データ保存先を参照できることを確認する | [AppDataの仮想化](https://learn.microsoft.com/en-us/windows/msix/desktop/flexible-virtualization) |
+| Windows に登録したプリンターが Chrome の印刷先に見当たらないとき | Windows の登録状況を確認し、Chrome の印刷画面で［もっと見る］から全送信先を開く | [Windows でのプリンター登録と Chrome での選択](windows-setup.md#brother-hl-l3230cdw-の登録) |
 | 共通指示を編集して別環境へ反映するとき | 実際に読む保存先と配置方式を確認する。コピー先には再適用が必要なため、原本の編集と有効化を分けて確認する | [配置と同期](codex.md#配置と同期) |
 | 自分が所有しないサイトから続けて取得・解析するとき | 少数のURLでも同一サイトは1件ずつ取得し、応答後にsleep等で待機する。取得済み結果を再利用し、制限時は待機を増やすか停止する | [外部サイトの取得と解析](repository-maintenance.md#外部サイトの取得と解析) |
 | Firebaseの管理・公開認証が不足しているように見えるとき | CLIログイン・ADC・OIDCとSDK設定を切り分け、導入済みツールと既存認証で対象の読み取りが通るか確認する。ADCの不在やSDKの認証エラーだけで再ログインが必要と判断しない | [Firebase 管理・公開認証](firebase-deploy-auth.md) |
