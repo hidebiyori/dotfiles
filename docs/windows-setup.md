@@ -128,6 +128,38 @@ Windows 版 Codex の Git 機能に必要な場合は、通常の PowerShell で
 winget install --id Git.Git --exact --source winget
 ```
 
+## Brother HL-L3230CDW の登録
+
+Windows 11 x64 で、同じ LAN にあるプリンターを Brother 純正ドライバーと標準 TCP/IP ポート（RAW、9100）で登録する。
+必要な PC で [専用スクリプト](../bin/setup-windows-printer.ps1)を個別に実行する。紙への印刷は登録後に Chrome などのアプリから行う。
+
+1. プリンター本体のネットワーク設定リストなどで IPv4 アドレスを確認する。
+   Windows から名前解決できる場合は、プリンターのホスト名も指定できる。
+   [Brother のネットワーク設定レポート](https://support.brother.co.jp/j/s/support/html/hll3230cdwb_jpn/ug/html/GUID-44BEFA90-16C6-48A6-8A51-4A2D1A14D01F_63.html)
+2. Brother 公式サイトの Windows 11 向け「プリンタードライバー」をダウンロードして展開し、`gdi\BROCH17A.INF` のパスを控える。
+   Windows に機種専用ドライバーが登録済みなら `-DriverInf` を省略できる。
+   [HL-L3230CDW の公式ダウンロード](https://support.brother.co.jp/j/b/downloadlist.aspx?c=jp&lang=ja&os=10075&prod=hll3230cdw)
+3. 下の例のリポジトリ、ホスト名、INF のパスを置き換える。`-WhatIf` で変更予定を確認し、適用時は
+   **管理者として開いた Windows PowerShell** で同じコマンドから `-WhatIf` を外して実行する。
+
+```powershell
+$repo = '\\wsl$\Ubuntu\home\<Linuxユーザー名>\git\dotfiles'
+$printerAddress = 'printer.local'
+$driverInf = 'C:\path\to\driver\gdi\BROCH17A.INF'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$repo\bin\setup-windows-printer.ps1" -PrinterHostAddress $printerAddress -DriverInf $driverInf -WhatIf
+```
+
+同じ設定で再実行すると既存のキューとポートを再利用する。同名で接続先やドライバーが異なる場合は停止する。
+ポートとドライバーの構成を確認し、以前のキューを置き換える場合は、印刷待ちがないことを確認して Windows の設定から取り除く。
+画面で追加する場合は Windows の［プリンターとスキャナー］で手動追加を選び、TCP/IP デバイスとして接続先を指定する。
+ドライバーの自動選択のチェックを外し、［ディスク使用］で上記の INF を指定して **Brother HL-L3230CDW series** を選ぶ。
+プリンター名を **Brother HL-L3230CDW** にし、ポートが標準 TCP/IP の RAW、9100 になっていることを確認する。
+
+Chrome の印刷画面で送信先に表示されなければ、［送信先］欄の下の［もっと見る］から **Brother HL-L3230CDW** を選ぶ。
+この選択のための再起動は不要。初回は本体のそばで1ページを1部印刷し、紙への出力を確認する。
+印刷が意図せず続く場合は本体の［キャンセル］を押し、Windows の印刷キューでも該当ジョブを取り消す。
+[Chrome の印刷手順](https://support.google.com/chrome/answer/1069693?hl=ja)
+
 ## 更新とエラー時の扱い
 
 設定だけを再適用する場合は WSL 内の `u`、導入済みツールと Windows 側の管理対象アプリの更新は `up` を使う。

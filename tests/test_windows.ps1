@@ -539,5 +539,6 @@ Test-Case 'Existing VS Code WSL extension is not reinstalled' {
 }
 
 . (Join-Path $PSScriptRoot 'test_windows_keyboard.ps1')
+. (Join-Path $PSScriptRoot 'test_windows_printer.ps1')
 
 Write-Host ("{0} Windows tests passed." -f $script:Passed)
