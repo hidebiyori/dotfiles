@@ -112,6 +112,12 @@
 - スキル付属の Python スクリプト（例: `skill-creator` の `quick_validate.py`）には、導入済みの `~/.local/share/codex-skill-python/bin/python` を優先する。PyYAML を含む共通の仮想環境で、作業リポジトリの依存関係とは分離している。
 - 環境がない場合は `~/git/dotfiles/bin/setup-skill-python.sh` と README の手順を参照する。通常の検証では再作成・再インストールをせず、プロジェクト固有の Python 環境はそのリポジトリの指示を優先する。
 
+# Windows 版 Codex の Chrome と WSL
+
+- Windows 版 Codex で Chrome を使う依頼では、Computer Use の `@Chrome` または指定されたタブを使い、実際に開いた URL とタイトルを確認する。
+- Windows native で既存チャットの作業ディレクトリが無効な場合は、有効な `workdir` を明示し、`\\wsl$\...` で実体を確認する。Chrome を使う依頼では、ブラウザーの接続もそのチャットで試す。
+- 設定と復旧手順は `~/git/dotfiles/docs/windows-setup.md` の「Windows 版 Codex と WSL の併用」を参照する。Windows からは `\\wsl$\<ディストリビューション>\home\<Linuxユーザー名>\git\dotfiles\docs\windows-setup.md` で開く。
+
 # Chrome / Playwright の接続
 
 - Chromebook の ChromeOS 側の Chrome を調査するとき、Linux 側で `Playwright Extension not found` が出ても、拡張機能が未導入・接続不能と断定しない。導入済みの Playwright MCP と接続リンクを使う方法を確認する。
@@ -135,7 +141,7 @@ Codex の作業品質を維持しながら、不要なブラウザ起動やプ�
 
 - Playwright MCP は通常、共通設定 `~/.codex/config.toml` の既存の `[mcp_servers.playwright]` で `enabled = false` にし、チャット開始時の自動起動を無効にする。`CODEX_HOME` を指定している場合はその設定を確認する。実行パス・引数は残し、ツールの再インストールは行わない。
 - `AGENTS.md` の指示だけでは MCP の自動起動は止まらない。設定が有効な環境で変更が必要な場合は、他の進行中チャットへの影響を確認する。設定の反映を理由にアプリを再起動したり、既存の接続を終了したりしない。
-- 下記の例外に該当するブラウザ検証では、`~/git/dotfiles/docs/playwright-extension.md` に従って、このチャット専用のクライアントを必要な時点で起動する。既にこのチャットの接続があれば再利用し、検証のためだけに共通設定を常時有効へ戻さない。
+- 下記の例外に該当し、Chromebook で Playwright MCP を使う場合は、`~/git/dotfiles/docs/playwright-extension.md` に従って、このチャット専用のクライアントを必要な時点で起動する。既にこのチャットの接続があれば再利用し、検証のためだけに共通設定を常時有効へ戻さない。
 - 検証終了後は自分で起動したクライアントの標準入力を閉じて正常終了を待ち、必要ならそのプロセスだけに `SIGTERM` を送る。終了したことを確認し、接続維持を依頼されているものや他のチャットの接続は残す。
 - `cua_node` にはブラウザ以外の Node REPL、コードレビュー、アプリ操作用 MCP も含まれる。名前だけで停止・無効化せず、使用中か不明なプロセスや Codex 本体・renderer を終了しない。
 
