@@ -78,9 +78,23 @@ Computer Use で Windows アプリを操作し、開発に WSL のツールを�
 3. エージェントの設定を変更した場合は、進行中の作業を終えてアプリを再起動する。
 4. [README のパス](../README.md#windows-codex-でプロジェクトを追加するとき)で対象フォルダーを追加する。
 
-Computer Use は **Settings → Computer use** で利用可否を確認し、案内に沿って有効にする。
-Windows をロック解除して対象アプリを表示する。操作中は Computer Use が同じデスクトップのマウスとキーボードを使う。
+Windows アプリを画面操作するときは **Settings → Computer Use** で利用可否を確認し、案内に沿って有効にする。
+Windows をロック解除して対象アプリを表示する。画面操作中は Computer Use が同じデスクトップのマウスとキーボードを使う。
 [公式の Computer Use の手順](https://learn.chatgpt.com/docs/computer-use)。
+
+### Chrome を操作する
+
+1. デスクトップアプリの **Settings → Computer Use → Chrome** で **Manage** が表示されることを確認する。
+   初回は画面の案内に沿って ChatGPT 拡張機能を設定し、拡張機能が有効な Chrome プロファイルを使う。
+2. Codex の入力欄の `@` メニューから **Chrome** を選ぶ。開いているタブを使う場合は、そのタブを指定する。
+3. 接続確認には **「@Chrome https://example.com/ を開いてページタイトルを確認して」** と依頼する。
+   Chrome で実際に開いた URL とタイトルを確認する。タイトルは **Example Domain**。
+
+Chrome が `@` メニューに出ない場合は、**Settings → Computer Use** の Chrome のトグルと使用中のプロファイルを確認する。
+接続が失敗する場合は、新しい Codex チャットでも確認する。サイトのアクセス確認が表示されたら、利用者が対象サイトのアクセス可否を選ぶ。
+[公式のブラウザー拡張機能の手順](https://learn.chatgpt.com/docs/chrome-extension)。
+
+### WSL の作業ディレクトリを確認する
 
 WSL に置いたリポジトリの Git・ビルド・テストは WSL 側で実行する。新しい統合ターミナルで対象フォルダーへ移動し、
 `pwd` が `/home/<Linuxユーザー名>/git/<リポジトリ名>`、`uname -s` が `Linux` になることを確認する。
@@ -92,6 +106,21 @@ wsl.exe -d Ubuntu --cd '/home/<Linuxユーザー名>/git/<リポジトリ名>' -
 
 WSL 側のファイルを UNC パスで開く場合、Windows 側でのファイル操作や Git の状態表示に制約が出ることがある。
 サンドボックスで `wsl.exe` の起動が制限される場合は、WSL の統合ターミナルで `git` などを直接実行する。
+
+WSL にあるプロジェクトの既存チャットで、Windows native の作業先が `C:\home\...` になっていたり、
+コマンド起動時に「ディレクトリ名が無効です」(`os error 267`) が出たりする場合は、Windows から WSL の実体を確認する。
+コマンド自体が起動できない場合は、実行ツールの `workdir` に `C:\` など有効な Windows フォルダーを明示する。
+
+```powershell
+$projectPath = '\\wsl$\Ubuntu\home\<Linuxユーザー名>\git\<リポジトリ名>'
+Test-Path -LiteralPath $projectPath -PathType Container
+```
+
+`Ubuntu` と各フォルダー名は実際の環境に合わせる。`\\wsl.localhost\...` が制限付き環境で見えない場合は、
+`\\wsl$\...` も確認する。チャットが無効な作業先を参照し続ける場合は、
+[プロジェクト追加の手順](../README.md#windows-codex-でプロジェクトを追加するとき)で確認済みのフォルダーを開き、そのプロジェクトで新しいチャットを開始する。
+Chrome を使う依頼では、[Chrome の接続手順](#chrome-を操作する)でブラウザーを実際に確認する。
+
 開発作業が Linux 中心でエージェントに WSL のツールを直接使わせたい場合は、**Agent environment → WSL** を選んでアプリを再起動する。
 [公式の Windows / WSL 設定](https://learn.chatgpt.com/docs/windows/windows-app#windows-subsystem-for-linux-wsl)。
 
