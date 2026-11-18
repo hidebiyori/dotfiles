@@ -126,6 +126,20 @@ Chrome を使う依頼では、[Chrome の接続手順](#chrome-を操作する)
 
 Windows 側の Codex 保存先と共通指示の同期は [Codex の管理手順](codex.md#配置と同期)を参照する。
 
+### Android から新規チャットの作業先を選ぶ
+
+Android の ChatGPT アプリから、リモート接続済みの Windows PC で Codex の新規チャットを作るときの手順。
+[リモート接続の公式設定手順](https://learn.chatgpt.com/docs/remote-connections#set-up-mobile-access)。
+
+1. 入力欄の上にあるプロジェクト名をタップして「プロジェクトを選択」を開く。
+2. 「最近のプロジェクト」で候補名の下に表示されるパスを確認する。WSL 上のリポジトリは、
+   [接続先の Windows PC で実体を確認](#wsl-の作業ディレクトリを確認する)した
+   `\\wsl$\...` や `\\wsl.localhost\...` の候補を選んでチャットを開始する。
+
+同名の候補には、接続先に実在しない `C:\home\...` のようなパスが表示される場合がある。
+その候補が表示される理由は未確認。
+Chrome を使う場合は、[Chrome の接続手順](#chrome-を操作する)でブラウザーの接続を確認する。
+
 ## 導入後の確認と認証
 
 Windows の `wsl --list --verbose` で対象の VERSION が `2` であることを確認する。
