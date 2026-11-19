@@ -65,6 +65,7 @@ dotfiles に安全に反映できない場合は、非公開の識別情報を�
 | Windows の Computer Use と WSL の開発環境を併用するとき | Windows native のエージェントを使い、統合ターミナルは WSL に設定する。WSL に置いたリポジトリの Git・ビルド・テストは WSL 側で実行する | [Windows 版 Codex と WSL の併用](windows-setup.md#windows-版-codex-と-wsl-の併用) |
 | Windows 版 Codex で Chrome の接続や WSL の作業先を調べるとき | Chrome は `@Chrome` で対象ページを開いて接続を確かめる。作業ディレクトリが無効な場合は、有効な作業先を明示して `\\wsl$\` で実体を確認する | [Chrome の操作](windows-setup.md#chrome-を操作する)・[作業ディレクトリの確認](windows-setup.md#wsl-の作業ディレクトリを確認する) |
 | Android からリモート接続先の Windows PC で Codex の新規チャットを始めるとき | 「最近のプロジェクト」に同名の候補が並んだら、表示パスを見て接続先で実体を確認した作業先を選ぶ | [Android から新規チャットの作業先を選ぶ](windows-setup.md#android-から新規チャットの作業先を選ぶ) |
+| Android の Codex で既存のスレッドが見つからないとき | 接続先の PC で本文を確認し、Android では同じ PC の一覧と別端末の表示を照合する | [スレッドの確認と復旧](codex.md#codex-のスレッドが見つからないとき) |
 | Windows アプリから WSL の定期タスクを実行するとき | 登録状態と結果を区別する。毎回の新規スレッド作成に失敗する場合は、利用者の希望に応じて同じスレッドに戻る方式を試し、通知の受信と応答を確認する | [Windows と WSL の定期タスク](codex.md#windows-と-wsl-の定期タスク) |
 | 制限付き実行環境でGit操作やNext.js検証が失敗するとき | `.git` の読み取り拒否や子プロセスの `EPERM` を確認してから、すでに許可された操作・同じ導入済みコマンドだけを許可された実行文脈で再試行する。権限や依存を一律に広げない | [制限付き実行環境でのGit操作とNode検証](repository-maintenance.md) |
 | Playwright 1.62.1 の `waitForFunction` で非同期条件を待つとき | Promise 自体が真と判定され、解決値が偽でも待機が終わり得る。結果を明示的に取得して期限付きで再評価し、バージョンを変更したら挙動を再確認する | [Playwright 1.62.1 の判定実装](https://github.com/microsoft/playwright/blob/v1.62.1/packages/playwright-core/src/server/frames.ts#L1491-L1535) |
