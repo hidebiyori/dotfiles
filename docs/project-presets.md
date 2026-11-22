@@ -87,8 +87,11 @@ Next.js 16 以降の `next build` は lint を実行しないため、CI で `ch
 
 ## 初回導入
 
+新規アプリは [新規アプリの構成](repository-maintenance.md#新規アプリの構成) に沿って用意する。
+新規の Next.js アプリでは、画面、アプリの処理、自動テストに TypeScript を使うことを基本にする。
+`create-next-app` で作成する場合は `--typescript` を指定する。
+
 導入済みの Python 3 を使う。同期コマンドはネットワーク通信、依存導入、Git 操作を行わない。
-新規アプリ自体は通常の Next.js の作成手順で用意する。
 `create-next-app` の `--biome` も利用できるが、生成された設定と共通プリセットの統合は次の手順で行う。
 [create-next-app](https://nextjs.org/docs/app/api-reference/cli/create-next-app)。
 
