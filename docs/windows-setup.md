@@ -52,8 +52,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\instal
 ```
 
 対象アプリの更新も行う場合は `-UpgradeApps` を加える。
-Steam も導入する場合は `-IncludeSteam` を加える。通常のセットアップと `-AppsOnly` のどちらでも指定できる。
-Steam だけの導入・確認方法は [Steam（任意）](desktop-apps.md#steam任意)を参照する。
+任意アプリのオプションは通常のセットアップと `-AppsOnly` のどちらでも指定できる。
+Steam は `-IncludeSteam` で追加する。[Steam の導入手順](desktop-apps.md#steam任意)。
+だいなファイラーは `-IncludeDynaFiler` で追加する。[だいなファイラーの導入手順](desktop-apps.md#だいなファイラー任意)。
 導入元・対象一覧・更新方針は[アプリ管理](desktop-apps.md)を参照する。
 スクリプト自体の更新は、最初のダウンロードと内容確認を再度行う。
 

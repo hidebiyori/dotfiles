@@ -34,7 +34,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "\\wsl$\Ubuntu\home\<Lin
 ```
 
 パスは利用するディストリビューション名とユーザー名に合わせる。
-Steam も導入済みなら `-IncludeSteam` を追加して更新できる。WSL の通常の `up` には含めない。
+導入済みの任意アプリを更新する場合は該当するオプションを指定する。
+Steam は `-IncludeSteam`、だいなファイラーは `-IncludeDynaFiler` を使う。
 
 ### Steam（任意）
 
@@ -64,6 +65,20 @@ winget list --id Valve.Steam --exact --source winget
 
 スタートメニューから Steam を開き、初回のクライアント更新とサインインを行う。
 ゲームのインストールは Steam 内で選択する。クライアント更新やゲームの取得には追加の通信が発生する。
+
+### だいなファイラー（任意）
+
+`-IncludeDynaFiler` を指定したときに、Microsoft Store 版（`9P6MWCBSQFKK`）を導入対象に加える。
+[Microsoft Store の DynaFiler](https://apps.microsoft.com/detail/9p6mwcbsqfkk)。
+
+通常の PowerShell で、準備したスクリプトにオプションを指定する。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\install-windows.ps1" -AppsOnly -IncludeDynaFiler
+```
+
+このコマンドは標準の Windows アプリと VS Code の WSL 拡張の不足分も導入する。
+WSL のセットアップも行う場合は `-AppsOnly` を外す。
 
 ## Mac
 

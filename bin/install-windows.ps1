@@ -5,7 +5,8 @@ param(
     [string]$Distribution = 'Ubuntu',
     [switch]$AppsOnly,
     [switch]$UpgradeApps,
-    [switch]$IncludeSteam
+    [switch]$IncludeSteam,
+    [switch]$IncludeDynaFiler
 )
 
 # Keep this entry point self-contained: a new PC does not need Git for Windows.
@@ -14,7 +15,7 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
 function Get-ManagedWindowsApps {
-    param([switch]$IncludeSteam)
+    param([switch]$IncludeSteam, [switch]$IncludeDynaFiler)
     @(
         [pscustomobject]@{ Name = 'Codex / ChatGPT desktop'; Id = '9PLM9XGG6VKS'; Source = 'msstore' }
         [pscustomobject]@{ Name = 'Google Chrome'; Id = 'Google.Chrome'; Source = 'winget' }
@@ -22,6 +23,9 @@ function Get-ManagedWindowsApps {
         [pscustomobject]@{ Name = 'GitHub CLI'; Id = 'GitHub.cli'; Source = 'winget' }
         if ($IncludeSteam) {
             [pscustomobject]@{ Name = 'Steam'; Id = 'Valve.Steam'; Source = 'winget' }
+        }
+        if ($IncludeDynaFiler) {
+            [pscustomobject]@{ Name = 'DynaFiler'; Id = '9P6MWCBSQFKK'; Source = 'msstore' }
         }
     )
 }
@@ -56,8 +60,8 @@ function Invoke-WingetNative {
 }
 
 function Install-WindowsApps {
-    param([switch]$Upgrade, [switch]$IncludeSteam, [switch]$OnlyInstalled)
-    foreach ($app in (Get-ManagedWindowsApps -IncludeSteam:$IncludeSteam)) {
+    param([switch]$Upgrade, [switch]$IncludeSteam, [switch]$OnlyInstalled, [switch]$IncludeDynaFiler)
+    foreach ($app in (Get-ManagedWindowsApps -IncludeSteam:$IncludeSteam -IncludeDynaFiler:$IncludeDynaFiler)) {
         Write-Host ("Checking {0} ({1})" -f $app.Name, $app.Id)
         $selection = @('--id', $app.Id, '--exact', '--source', $app.Source)
         $queryArguments = @('list') + $selection + @('--accept-source-agreements', '--disable-interactivity')
@@ -310,9 +314,9 @@ function Initialize-Wsl {
 }
 
 function Invoke-WindowsSetup {
-    param([string]$Name, [switch]$OnlyApps, [switch]$Upgrade, [switch]$IncludeSteam)
+    param([string]$Name, [switch]$OnlyApps, [switch]$Upgrade, [switch]$IncludeSteam, [switch]$IncludeDynaFiler)
     Assert-WindowsHost -OnlyApps:$OnlyApps
-    Install-WindowsApps -Upgrade:$Upgrade -IncludeSteam:$IncludeSteam
+    Install-WindowsApps -Upgrade:$Upgrade -IncludeSteam:$IncludeSteam -IncludeDynaFiler:$IncludeDynaFiler
     Install-WslExtension
     if ($OnlyApps) { return $true }
     Initialize-Wsl -Name $Name
@@ -320,7 +324,8 @@ function Invoke-WindowsSetup {
 
 if ($MyInvocation.InvocationName -ne '.') {
     try {
-        $ready = Invoke-WindowsSetup -Name $Distribution -OnlyApps:$AppsOnly -Upgrade:$UpgradeApps -IncludeSteam:$IncludeSteam
+        $ready = Invoke-WindowsSetup -Name $Distribution -OnlyApps:$AppsOnly -Upgrade:$UpgradeApps `
+            -IncludeSteam:$IncludeSteam -IncludeDynaFiler:$IncludeDynaFiler
         if (-not $ready) {
             Write-Host 'Setup is not complete yet. Follow the instructions above, then rerun the same command.'
             exit 2

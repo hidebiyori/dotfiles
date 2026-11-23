@@ -84,7 +84,7 @@ Test-Case 'Upgrade-only mode skips missing apps without installing them' {
         }
         return 0
     }
-    Install-WindowsApps -Upgrade -OnlyInstalled -IncludeSteam
+    Install-WindowsApps -Upgrade -OnlyInstalled -IncludeSteam -IncludeDynaFiler
     $updates = @($script:Calls | Where-Object { $_.StartsWith('upgrade ') })
     Assert-True ($updates.Count -eq 1 -and $updates[0] -like '*GitHub.cli*') 'Only the installed app should upgrade.'
     Assert-True (@($script:Calls | Where-Object { $_.StartsWith('install ') }).Count -eq 0) 'No missing app should be installed.'
@@ -96,9 +96,9 @@ Test-Case 'Windows upgrade entry point does not run WSL or extension setup' {
         Assert-True $OnlyApps 'Expected an app-only host check.'
     }
     Set-Mock 'Install-WindowsApps' {
-        param([switch]$Upgrade, [switch]$OnlyInstalled, [switch]$IncludeSteam)
+        param([switch]$Upgrade, [switch]$OnlyInstalled, [switch]$IncludeSteam, [switch]$IncludeDynaFiler)
         Assert-True ($Upgrade -and $OnlyInstalled) 'Expected an installed-only upgrade.'
-        Assert-True (-not $IncludeSteam) 'Steam should remain opt-in.'
+        Assert-True (-not ($IncludeSteam -or $IncludeDynaFiler)) 'Optional apps should require explicit selection.'
         $script:Calls.Add('installed-only-upgrade')
     }
     Set-Mock 'Install-WslExtension' { throw 'Unexpected extension setup.' }
@@ -107,13 +107,13 @@ Test-Case 'Windows upgrade entry point does not run WSL or extension setup' {
     Assert-True ($script:Calls.Count -eq 1) 'Expected only the app upgrade.'
 }
 
-Test-Case 'Windows upgrade only includes Steam when requested' {
+Test-Case 'Windows upgrade forwards explicit optional app selections' {
     Set-Mock 'Assert-WindowsHost' { param([switch]$OnlyApps) }
     Set-Mock 'Install-WindowsApps' {
-        param([switch]$Upgrade, [switch]$OnlyInstalled, [switch]$IncludeSteam)
-        Assert-True ($Upgrade -and $OnlyInstalled -and $IncludeSteam) 'Expected explicit Steam upgrade.'
+        param([switch]$Upgrade, [switch]$OnlyInstalled, [switch]$IncludeSteam, [switch]$IncludeDynaFiler)
+        Assert-True ($Upgrade -and $OnlyInstalled -and $IncludeSteam -and $IncludeDynaFiler) 'Expected an installed-only upgrade of the selected apps.'
     }
-    Invoke-WindowsUpgrade -IncludeSteam
+    Invoke-WindowsUpgrade -IncludeSteam -IncludeDynaFiler
 }
 
 Test-Case 'Opt-in Steam installs once and is kept on rerun' {
@@ -150,6 +150,28 @@ Test-Case 'Steam upgrades require both explicit options' {
     Assert-True (@($script:Calls | Where-Object { $_.StartsWith('upgrade --id Valve.Steam ') }).Count -eq 0) 'Selecting installed Steam must not upgrade it.'
     Install-WindowsApps -Upgrade -IncludeSteam
     Assert-True (@($script:Calls | Where-Object { $_.StartsWith('upgrade --id Valve.Steam --exact --source winget ') }).Count -eq 1) 'Expected one explicitly requested Steam upgrade.'
+}
+
+Test-Case 'Opt-in DynaFiler installs the Store package once without Steam' {
+    $script:DynaFilerInstalled = $false
+    Set-Mock 'Invoke-WingetNative' {
+        param([string[]]$CommandArguments)
+        $script:Calls.Add(($CommandArguments -join ' '))
+        if ($CommandArguments[2] -ne '9P6MWCBSQFKK') { return 0 }
+        if ($CommandArguments[0] -eq 'list') {
+            if ($script:DynaFilerInstalled) { return 0 }
+            return 2316632084L
+        }
+        $script:DynaFilerInstalled = $true
+        return 0
+    }
+    Install-WindowsApps -IncludeDynaFiler
+    Install-WindowsApps -IncludeDynaFiler
+    $queries = @($script:Calls | Where-Object { $_ -like 'list --id 9P6MWCBSQFKK --exact --source msstore *' })
+    $installs = @($script:Calls | Where-Object { $_.StartsWith('install ') })
+    Assert-True ($queries.Count -eq 2) 'Expected one exact Store query per run.'
+    Assert-True ($installs.Count -eq 1 -and $installs[0] -like 'install --id 9P6MWCBSQFKK --exact --source msstore *--silent --no-upgrade') 'Only the exact Store package should be installed once.'
+    Assert-True (($script:Calls -join ' ') -notlike '*Valve.Steam*') 'Selecting DynaFiler must not include Steam.'
 }
 
 Test-Case 'Missing apps install only the exact selected packages' {
@@ -347,17 +369,17 @@ Test-Case 'AppsOnly does not touch WSL' {
     Assert-True (($script:Calls -join ',') -eq 'apps,extension') 'Wrong apps-only operations.'
 }
 
-Test-Case 'Setup forwards Steam selection with AppsOnly and upgrades' {
+Test-Case 'Setup forwards optional app selections in AppsOnly upgrade mode' {
     Set-Mock 'Assert-WindowsHost' { param([switch]$OnlyApps) Assert-True $OnlyApps 'Apps-only host check expected.' }
     Set-Mock 'Install-WindowsApps' {
-        param([switch]$Upgrade, [switch]$IncludeSteam)
-        Assert-True ($Upgrade -and $IncludeSteam) 'Steam selection and upgrade options were not forwarded.'
-        $script:Calls.Add('apps-with-steam')
+        param([switch]$Upgrade, [switch]$IncludeSteam, [switch]$IncludeDynaFiler)
+        Assert-True ($Upgrade -and $IncludeSteam -and $IncludeDynaFiler) 'Optional app selections and upgrade mode were not forwarded.'
+        $script:Calls.Add('apps-with-options')
     }
     Set-Mock 'Install-WslExtension' { $script:Calls.Add('extension') }
     Set-Mock 'Initialize-Wsl' { throw 'Unexpected WSL operation.' }
-    Assert-True (Invoke-WindowsSetup -Name Ubuntu -OnlyApps -Upgrade -IncludeSteam) 'Opt-in apps-only setup should complete.'
-    Assert-True (($script:Calls -join ',') -eq 'apps-with-steam,extension') 'Wrong opt-in apps-only operations.'
+    Assert-True (Invoke-WindowsSetup -Name Ubuntu -OnlyApps -Upgrade -IncludeSteam -IncludeDynaFiler) 'Opt-in apps-only setup should complete.'
+    Assert-True (($script:Calls -join ',') -eq 'apps-with-options,extension') 'Wrong opt-in apps-only operations.'
 }
 
 Test-Case 'New WSL installation stops before Linux bootstrap' {
